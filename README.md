@@ -2,7 +2,7 @@
 
 Pencatatan dan dasbor kegiatan edukasi keuangan OJK Provinsi Banten.
 
-Tim mengunggah laporan kegiatan (PDF, Word, atau foto). AI membaca laporan dan mengisi data kegiatan. Tim mengecek dan menyimpannya. Dasbor lalu menampilkan posisi terkini: jumlah kegiatan, peserta, sebaran 8 kabupaten/kota, sasaran, topik, dan insight AI. Tombol **Salin status** menghasilkan ringkasan siap tempel untuk WhatsApp atau email.
+Tim mengunggah laporan kegiatan (PDF, Word, atau foto). AI membaca laporan dan mengisi data kegiatan. Tim mengecek dan menyimpannya. Dasbor lalu menampilkan posisi terkini: jumlah kegiatan, peserta, sebaran 8 kabupaten/kota dan 155 kecamatan (peta panas), sasaran, topik, dan insight AI. Tombol **Salin status** menghasilkan ringkasan siap tempel untuk WhatsApp atau email.
 
 File laporan asli **tidak disimpan**. Yang disimpan hanya data hasil ekstraksi yang sudah dicek tim.
 
@@ -34,7 +34,8 @@ Fungsi server Vercel (folder api/)
 | `shared/statistik.ts` | Perhitungan rekap (per wilayah, per bulan, dll.) dan teks "Salin status". |
 | `api/` | Fungsi server. `api/_lib/` berisi koneksi Gemini, database, dan pengecekan kode akses. |
 | `src/` | Tampilan website. `src/views/` satu file per halaman. |
-| `public/banten.json` | Batas 8 kabupaten/kota Banten untuk peta (Badan Informasi Geospasial, via repo GitHub ardian28/GeoJson-Indonesia-38-Provinsi, lisensi MIT; disederhanakan). |
+| `public/banten.json` | Batas 155 kecamatan dan 8 kab/kota Banten untuk peta. Sumber: portal GIS Kemendagri (data 2018 semester 1, via repo GitHub Alf-Anas/batas-administrasi-indonesia), disederhanakan dengan mapshaper; batas kab/kota digabung dari kecamatan. |
+| `shared/kecamatan.ts` | Daftar kecamatan per kab/kota (dari data yang sama). |
 | `scripts/dev-api.ts` | Server lokal untuk menjalankan `api/` tanpa Vercel. |
 
 ## Model data: satu kegiatan
@@ -49,6 +50,8 @@ Fungsi server Vercel (folder api/)
 | `tempat` | teks | |
 | `kabkota`* | pilihan | 8 kab/kota Banten, Daring, atau Luar Banten |
 | `kabkotaDitebak` | ya/tidak | Wilayah tidak tertulis di laporan dan ditebak AI |
+| `kecamatan`* | pilihan | Salah satu dari 155 kecamatan di kab/kota tersebut (`shared/kecamatan.ts`); kosong untuk daring/luar Banten |
+| `kecamatanDitebak` | ya/tidak | Kecamatan ditebak AI dari nama/alamat tempat |
 | `mode` | pilihan | Luring · Daring · Hybrid |
 | `narasumber` | daftar teks | |
 | `sasaran`* | daftar pilihan | Pelajar, mahasiswa, UMKM, dll. |
