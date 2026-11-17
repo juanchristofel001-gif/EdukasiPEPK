@@ -36,14 +36,15 @@ async function call(model: string, key: string, parts: Part[], opt: Opt) {
     .map((p: any) => p.text)
     .join('');
   if (!text) throw new GeminiError(`Jawaban AI kosong (${c?.finishReason || 'tanpa alasan'})`, 502);
+  if (c?.finishReason === 'MAX_TOKENS') throw new GeminiError('Jawaban AI terpotong (terlalu panjang).', 502);
   return text;
 }
 
 // Mencoba model satu per satu: model yang tidak tersedia atau kuotanya habis dilewati.
-export async function generate(parts: Part[], opt: Opt = {}) {
+export async function generate(parts: Part[], opt: Opt = {}, lewati: string[] = []) {
   const key = process.env.GEMINI_API_KEY;
   if (!key) throw new GeminiError('GEMINI_API_KEY belum diisi di pengaturan Vercel.', 503);
-  const list = [process.env.GEMINI_MODEL, good, ...CHAIN].filter((m, i, a): m is string => !!m && a.indexOf(m) === i);
+  const list = [process.env.GEMINI_MODEL, good, ...CHAIN].filter((m, i, a): m is string => !!m && a.indexOf(m) === i && !lewati.includes(m));
   let last: GeminiError | null = null;
   for (const m of list) {
     try {
@@ -55,13 +56,34 @@ export async function generate(parts: Part[], opt: Opt = {}) {
       if (last.status === 401 || (last.status === 403 && !/model/i.test(last.message)) || (last.status === 400 && /api key/i.test(last.message)))
         throw new GeminiError('API key Gemini ditolak. Periksa GEMINI_API_KEY di Vercel.', 401);
       if (last.status === 400 && !/model/i.test(last.message)) throw last; // file tidak bisa dibaca, dll.
+      console.error(`[gemini] ${m} gagal: ${last.status} ${last.message}`);
     }
   }
   if (last?.status === 429) throw new GeminiError('Kuota gratis Gemini sedang habis. Coba lagi beberapa menit lagi.', 429);
   throw last || new GeminiError('Tidak ada model Gemini yang bisa dipakai.', 502);
 }
 
+// Membaca JSON dari jawaban AI, toleran terhadap ``` atau teks tambahan di sekitarnya.
 export function parseJson(text: string): any {
-  const t = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```$/, '');
-  return JSON.parse(t);
+  const t = text.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+  try {
+    return JSON.parse(t);
+  } catch (e) {
+    const a = t.indexOf('{'),
+      b = t.lastIndexOf('}');
+    if (a >= 0 && b > a) return JSON.parse(t.slice(a, b + 1));
+    throw e;
+  }
+}
+
+// Panggil AI dan baca JSON-nya; kalau jawaban tidak terbaca, coba sekali lagi dengan model lain.
+export async function generateJson(parts: Part[], opt: Opt = {}) {
+  const r1 = await generate(parts, { ...opt, json: true });
+  try {
+    return { data: parseJson(r1.text), model: r1.model };
+  } catch {
+    console.error(`[gemini] JSON tidak terbaca dari ${r1.model}: ${r1.text.slice(0, 200)} … ${r1.text.slice(-120)}`);
+  }
+  const r2 = await generate(parts, { ...opt, json: true }, [r1.model]);
+  return { data: parseJson(r2.text), model: r2.model };
 }

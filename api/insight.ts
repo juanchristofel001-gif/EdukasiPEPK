@@ -4,7 +4,7 @@
 // Angka dihitung server dari database (bukan dari browser), lalu AI hanya menafsirkan.
 import { izinkan, fail, ok, type Req, type Res } from './_lib/http.js';
 import { db, aktif, DbError } from './_lib/db.js';
-import { generate, parseJson, GeminiError } from './_lib/gemini.js';
+import { generateJson, GeminiError } from './_lib/gemini.js';
 import { isTanggal } from '../shared/schema.js';
 import { statistik, dalamPeriode } from '../shared/statistik.js';
 
@@ -54,8 +54,8 @@ Aturan: hanya pakai angka yang ada di data, jangan mengarang. Jika peserta ditan
       };
       model = 'contoh';
     } else {
-      const r = await generate([{ text: prompt }], { json: true, temperature: 0.3, maxTokens: 2048 });
-      out = parseJson(r.text);
+      const r = await generateJson([{ text: prompt }], { temperature: 0.3, maxTokens: 8192 });
+      out = r.data;
       model = r.model;
     }
     const list = (v: unknown) => (Array.isArray(v) ? v.map((x) => String(x).slice(0, 400)).filter(Boolean).slice(0, 6) : []);

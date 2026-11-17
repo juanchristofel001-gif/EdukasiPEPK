@@ -2,7 +2,7 @@
 // (PDF/Word) atau gambar kecil (scan/foto), lihat src/baca-file.ts.
 // dan mengembalikan isian kegiatan untuk dicek tim. Tidak menyimpan apa pun.
 import { izinkan, fail, ok, type Req, type Res } from './_lib/http.js';
-import { generate, parseJson, GeminiError, type Part } from './_lib/gemini.js';
+import { generateJson, GeminiError, type Part } from './_lib/gemini.js';
 import { KECAMATAN } from '../shared/kecamatan.js';
 import { KABKOTA, KABKOTA_LAIN, MODE, PERAN_OJK, SASARAN, TOPIK, KANAL, METODE, rapikan } from '../shared/schema.js';
 
@@ -92,8 +92,8 @@ export default async function handler(req: Req, res: Res) {
     let model = 'contoh';
     if (process.env.MOCK_AI && !process.env.VERCEL) raw = CONTOH;
     else {
-      const r = await generate(parts, { json: true, temperature: 0.1, maxTokens: 2048 });
-      raw = parseJson(r.text);
+      const r = await generateJson(parts, { temperature: 0.1, maxTokens: 8192 });
+      raw = r.data;
       model = r.model;
     }
     const isian = rapikan({ ...raw, sumberFile: nama });
