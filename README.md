@@ -93,3 +93,8 @@ KODE_AKSES=uji MOCK_AI=1 STATIC_DIR=dist npm run dev:api   # buka http://localho
 Tanpa `FIREBASE_SERVICE_ACCOUNT`, data disimpan di `.data/kegiatan.json`. `MOCK_AI=1` mengganti AI dengan jawaban contoh. Untuk mengubah tampilan dengan reload otomatis, jalankan juga `npm run dev` (port 5173).
 
 Sebelum push, jalankan `npm run cek` untuk memeriksa tipe data.
+
+## Kredit
+
+- Ikon jabat tangan pada logo: [Lucide](https://lucide.dev) (lisensi ISC).
+- Font: Plus Jakarta Sans (SIL Open Font License), disajikan lewat paket @fontsource.
