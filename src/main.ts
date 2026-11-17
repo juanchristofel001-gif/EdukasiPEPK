@@ -22,11 +22,12 @@ const merek = `<a class="merek" href="#/dasbor"><span class="logo">${IKON.topi}<
 function kerangka() {
   app.innerHTML = `
   <aside class="side">
+    <img class="ojk" src="/logo-ojk.png" alt="Otoritas Jasa Keuangan" width="325" height="128">
     ${merek}
     <nav class="nav">${NAV.map(([h, t, ic]) => `<a href="${h}">${ic}<span>${t}</span></a>`).join('')}</nav>
     <button class="foot" id="keluar">${IKON.keluar}<span>Keluar</span></button>
   </aside>
-  <header class="top">${merek}<button class="ikon-btn" id="keluar2" aria-label="Keluar">${IKON.keluar}</button></header>
+  <header class="top"><div class="top-kiri"><img class="ojk kecil" src="/logo-ojk.png" alt="Otoritas Jasa Keuangan" width="325" height="128">${merek}</div><button class="ikon-btn" id="keluar2" aria-label="Keluar">${IKON.keluar}</button></header>
   <main id="hal" class="main" tabindex="-1"></main>
   <nav class="bawah">${NAV.map(([h, t, ic]) => `<a href="${h}">${ic}<span>${t.replace(' laporan', '')}</span></a>`).join('')}</nav>`;
   const keluar = () => {
@@ -57,6 +58,7 @@ function masuk(pesan = '') {
   app.innerHTML = `
   <main class="masuk">
     <form id="fmasuk" class="kartu">
+      <img class="ojk masuk-ojk" src="/logo-ojk.png" alt="Otoritas Jasa Keuangan" width="325" height="128">
       <span class="logo besar">${IKON.topi}</span>
       <h1>Si<span>PEDULI</span>KU</h1>
       <p>Sistem Pencatatan Edukasi Literasi Keuangan, OJK Provinsi Banten. Masukkan kode akses tim.</p>
