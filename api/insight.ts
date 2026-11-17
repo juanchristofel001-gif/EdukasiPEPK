@@ -3,7 +3,7 @@
 //   POST ?dari=…&sampai=…                  → buat insight baru dengan AI dari data di database
 // Angka dihitung server dari database (bukan dari browser), lalu AI hanya menafsirkan.
 import { izinkan, fail, ok, type Req, type Res } from './_lib/http.js';
-import { db, DbError } from './_lib/db.js';
+import { db, aktif, DbError } from './_lib/db.js';
 import { generate, parseJson, GeminiError } from './_lib/gemini.js';
 import { isTanggal } from '../shared/schema.js';
 import { statistik, dalamPeriode } from '../shared/statistik.js';
@@ -28,7 +28,7 @@ export default async function handler(req: Req, res: Res) {
     if (req.method === 'GET') return ok(res, { insight: await s.getMeta(key) });
     if (req.method !== 'POST') return fail(res, 405, 'Metode tidak didukung.');
 
-    const semua = await s.list();
+    const semua = await aktif();
     const st = statistik(semua, { dari, sampai });
     if (!st.kegiatan) return fail(res, 400, 'Belum ada kegiatan di periode ini.');
     const catatan = dalamPeriode(semua, { dari, sampai })

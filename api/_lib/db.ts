@@ -14,14 +14,22 @@ export class DbError extends Error {
 }
 
 type Meta = Record<string, unknown>;
+export type Cadangan = { tanggal: string; dibuat: string; jumlah: number; kegiatan: Kegiatan[] };
+
+// Kegiatan yang dihapus tidak langsung hilang: diberi tanda `dihapus` (waktu) dan masuk sampah.
+type Baris = Kegiatan & { dihapus?: string | null };
 
 interface Store {
-  list(): Promise<Kegiatan[]>;
-  get(id: string): Promise<Kegiatan | null>;
-  put(k: Kegiatan): Promise<void>;
-  remove(id: string): Promise<boolean>;
+  semua(): Promise<Baris[]>; // termasuk yang di sampah
+  get(id: string): Promise<Baris | null>;
+  put(k: Baris): Promise<void>;
+  remove(id: string): Promise<boolean>; // hapus permanen
   getMeta(key: string): Promise<Meta | null>;
   setMeta(key: string, v: Meta): Promise<void>;
+  simpanCadangan(c: Cadangan): Promise<void>;
+  daftarCadangan(): Promise<Omit<Cadangan, 'kegiatan'>[]>;
+  ambilCadangan(tanggal: string): Promise<Cadangan | null>;
+  hapusCadangan(tanggal: string): Promise<void>;
 }
 
 let store: Store | null = null;
@@ -40,10 +48,11 @@ async function firestore(): Promise<Store> {
   const db = getFirestore(app);
   const col = db.collection('kegiatan');
   const meta = db.collection('meta');
+  const cad = db.collection('cadangan');
   return {
-    async list() {
-      const s = await col.orderBy('tanggal', 'desc').get();
-      return s.docs.map((d) => d.data() as Kegiatan);
+    async semua() {
+      const s = await col.get();
+      return s.docs.map((d) => d.data() as Baris);
     },
     async get(id) {
       const d = await col.doc(id).get();
@@ -65,6 +74,20 @@ async function firestore(): Promise<Store> {
     async setMeta(key, v) {
       await meta.doc(key).set(v);
     },
+    async simpanCadangan(c) {
+      await cad.doc(c.tanggal).set(c);
+    },
+    async daftarCadangan() {
+      const s = await cad.select('tanggal', 'dibuat', 'jumlah').get();
+      return s.docs.map((d) => d.data() as Omit<Cadangan, 'kegiatan'>).sort((a, b) => b.tanggal.localeCompare(a.tanggal));
+    },
+    async ambilCadangan(t) {
+      const d = await cad.doc(t).get();
+      return d.exists ? (d.data() as Cadangan) : null;
+    },
+    async hapusCadangan(t) {
+      await cad.doc(t).delete();
+    },
   };
 }
 
@@ -83,16 +106,16 @@ function lokal(): Store {
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(f, JSON.stringify(v, null, 1));
   };
+  const cfile = path.join(dir, 'cadangan.json');
   return {
-    async list() {
-      const all = await read<Kegiatan[]>(file, []);
-      return all.sort((a, b) => b.tanggal.localeCompare(a.tanggal));
+    async semua() {
+      return read<Baris[]>(file, []);
     },
     async get(id) {
-      return (await read<Kegiatan[]>(file, [])).find((k) => k.id === id) || null;
+      return (await read<Baris[]>(file, [])).find((k) => k.id === id) || null;
     },
     async put(k) {
-      const all = (await read<Kegiatan[]>(file, [])).filter((x) => x.id !== k.id);
+      const all = (await read<Baris[]>(file, [])).filter((x) => x.id !== k.id);
       all.push(k);
       await write(file, all);
     },
@@ -110,6 +133,25 @@ function lokal(): Store {
       m[key] = v;
       await write(mfile, m);
     },
+    async simpanCadangan(c) {
+      const m = await read<Record<string, Cadangan>>(cfile, {});
+      m[c.tanggal] = c;
+      await write(cfile, m);
+    },
+    async daftarCadangan() {
+      const m = await read<Record<string, Cadangan>>(cfile, {});
+      return Object.values(m)
+        .map(({ kegiatan, ...r }) => r)
+        .sort((a, b) => b.tanggal.localeCompare(a.tanggal));
+    },
+    async ambilCadangan(t) {
+      return (await read<Record<string, Cadangan>>(cfile, {}))[t] || null;
+    },
+    async hapusCadangan(t) {
+      const m = await read<Record<string, Cadangan>>(cfile, {});
+      delete m[t];
+      await write(cfile, m);
+    },
   };
 }
 
@@ -119,6 +161,30 @@ export async function db(): Promise<Store> {
   else if (process.env.VERCEL) throw new DbError('Database belum diatur: isi FIREBASE_SERVICE_ACCOUNT di pengaturan Vercel.');
   else store = lokal();
   return store;
+}
+
+const urut = (l: Kegiatan[]) => l.sort((a, b) => b.tanggal.localeCompare(a.tanggal) || b.dibuat.localeCompare(a.dibuat));
+const bersih = ({ dihapus, ...k }: Baris) => k as Kegiatan;
+
+// Kegiatan aktif (tidak di sampah), terbaru dulu.
+export async function aktif() {
+  return urut((await (await db()).semua()).filter((k) => !k.dihapus).map(bersih));
+}
+// Isi sampah, yang terakhir dihapus dulu.
+export async function sampah() {
+  return (await (await db()).semua()).filter((k) => k.dihapus).sort((a, b) => String(b.dihapus).localeCompare(String(a.dihapus)));
+}
+
+const SIMPAN_CADANGAN = 30;
+// Salinan seluruh kegiatan (termasuk sampah) untuk tanggal hari ini (WIB); simpan 30 terakhir.
+export async function buatCadangan() {
+  const s = await db();
+  const semua = await s.semua();
+  const tanggal = new Date(Date.now() + 7 * 3600e3).toISOString().slice(0, 10);
+  await s.simpanCadangan({ tanggal, dibuat: new Date().toISOString(), jumlah: semua.filter((k) => !k.dihapus).length, kegiatan: semua });
+  const lama = (await s.daftarCadangan()).slice(SIMPAN_CADANGAN);
+  for (const c of lama) await s.hapusCadangan(c.tanggal);
+  return tanggal;
 }
 
 export function baru(input: KegiatanInput): Kegiatan {

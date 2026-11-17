@@ -21,7 +21,7 @@ export async function viewDaftar(el: HTMLElement) {
   }
   el.innerHTML = `
   <header class="ph"><div><h1>Kegiatan</h1><p>${semua.length} kegiatan tercatat</p></div>
-    <div class="kontrol"><button class="btn" id="csv"${semua.length ? '' : ' disabled'}>${IKON.unduh}Unduh CSV</button><a class="btn utama" href="#/unggah">${IKON.unggah}Unggah laporan</a></div></header>
+    <div class="kontrol"><a class="btn" href="#/sampah">${IKON.sampah}Sampah & cadangan</a><button class="btn" id="csv"${semua.length ? '' : ' disabled'}>${IKON.unduh}Unduh CSV</button><a class="btn utama" href="#/unggah">${IKON.unggah}Unggah laporan</a></div></header>
   <div class="saring">
     <input type="search" id="cari" placeholder="Cari judul, tempat, mitra, narasumber…" value="${esc(cari)}">
     <select id="wil"><option value="">Semua wilayah</option>${SEMUA_WILAYAH.map((w) => `<option${w === wilayah ? ' selected' : ''}>${w}</option>`).join('')}</select>
@@ -108,7 +108,7 @@ export async function viewDetail(el: HTMLElement, id: string) {
   <header class="ph"><h1>${esc(k.judul)}</h1><p>Dicatat ${new Date(k.dibuat).toLocaleDateString('id-ID', { dateStyle: 'long' })}${
     k.dicatatOleh ? ' oleh ' + esc(k.dicatatOleh) : ''
   }${k.diubah !== k.dibuat ? ' · diubah ' + new Date(k.diubah).toLocaleDateString('id-ID', { dateStyle: 'long' }) : ''}</p></header>
-  <section class="kartu">${formHtml(k)}<div class="aksi"><button class="btn bahaya" id="hapus">Hapus</button><button class="btn utama" id="simpan">Simpan perubahan</button></div></section>`;
+  <section class="kartu">${formHtml(k)}<div class="aksi"><button class="btn bahaya" id="hapus">${IKON.sampah}Pindahkan ke sampah</button><button class="btn utama" id="simpan">Simpan perubahan</button></div></section>`;
   const form = $<HTMLFormElement>('form', el);
   pasangForm(form);
   $('#simpan', el).onclick = async (e) => {
@@ -131,13 +131,13 @@ export async function viewDetail(el: HTMLElement, id: string) {
     }
   };
   $('#hapus', el).onclick = async (e) => {
-    if (!confirm(`Hapus "${k.judul}"? Data ini tidak bisa dikembalikan.`)) return;
+    if (!confirm(`Pindahkan "${k.judul}" ke sampah? Masih bisa dipulihkan dari halaman Sampah & cadangan.`)) return;
     const b = e.currentTarget as HTMLButtonElement;
     b.disabled = true;
     try {
       await api.hapus(k.id);
       await segarkanData();
-      toast('Kegiatan dihapus.');
+      toast('Dipindahkan ke sampah. Bisa dipulihkan dari Sampah & cadangan.');
       location.hash = '#/kegiatan';
     } catch (err: any) {
       tampilGalat(form, [err.message]);

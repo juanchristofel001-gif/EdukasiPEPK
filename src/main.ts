@@ -7,6 +7,7 @@ import { viewDasbor } from './views/dasbor.js';
 import { IKON } from './ikon.js';
 import { viewUnggah } from './views/unggah.js';
 import { viewDaftar, viewDetail } from './views/daftar.js';
+import { viewSampah } from './views/sampah.js';
 
 const app = $('#app');
 
@@ -42,10 +43,11 @@ function rute() {
   if (!$('#hal')) kerangka();
   const h = location.hash || '#/dasbor';
   const hal = $('#hal');
-  document.querySelectorAll('.nav a, .bawah a').forEach((a) => a.classList.toggle('aktif', h.startsWith(a.getAttribute('href')!)));
+  document.querySelectorAll('.nav a, .bawah a').forEach((a) => a.classList.toggle('aktif', (h.startsWith('#/sampah') ? '#/kegiatan' : h).startsWith(a.getAttribute('href')!)));
   const m = h.match(/^#\/kegiatan\/(.+)$/);
   if (m) viewDetail(hal, decodeURIComponent(m[1]));
   else if (h.startsWith('#/unggah')) viewUnggah(hal);
+  else if (h.startsWith('#/sampah')) viewSampah(hal);
   else if (h.startsWith('#/kegiatan')) viewDaftar(hal);
   else viewDasbor(hal);
   window.scrollTo(0, 0);

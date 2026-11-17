@@ -3,7 +3,17 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "functions": {
-    "api/ekstrak.ts": { "maxDuration": 60 },
-    "api/insight.ts": { "maxDuration": 60 }
-  }
+    "api/ekstrak.ts": {
+      "maxDuration": 60
+    },
+    "api/insight.ts": {
+      "maxDuration": 60
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cadangan?cron=1",
+      "schedule": "0 17 * * *"
+    }
+  ]
 }

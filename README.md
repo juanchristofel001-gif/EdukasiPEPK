@@ -15,11 +15,17 @@ Browser (Vite + TypeScript)
 Fungsi server Vercel (folder api/)
    ├─ api/akses.ts     cek kode akses
    ├─ api/ekstrak.ts   kirim laporan ke Gemini → isian kegiatan (tidak menyimpan apa pun)
-   ├─ api/kegiatan.ts  baca / simpan / ubah / hapus kegiatan
+   ├─ api/kegiatan.ts  baca / simpan / ubah kegiatan; hapus = pindah ke sampah, bisa dipulihkan
+   ├─ api/cadangan.ts  cadangan harian seluruh data (Vercel Cron 00.00 WIB, 30 hari disimpan)
    └─ api/insight.ts   hitung rekap dari database → Gemini menafsirkan → disimpan
    │
    ├──► Firestore (Firebase): koleksi `kegiatan` dan `meta`
    └──► Gemini API (Google AI Studio)
+```
+
+Koleksi Firestore: `kegiatan` (data, termasuk yang di sampah dengan kolom `dihapus`), `cadangan` (satu dokumen per tanggal), `meta` (insight AI).
+
+```
 ```
 
 - Browser **tidak pernah** mengakses Firestore atau Gemini secara langsung. Semua kunci rahasia hanya ada di server.
@@ -74,6 +80,7 @@ Fungsi server Vercel (folder api/)
 | `GEMINI_API_KEY` | API key dari Google AI Studio |
 | `FIREBASE_SERVICE_ACCOUNT` | Seluruh isi file JSON kunci akun layanan Firebase |
 | `GEMINI_MODEL` | (opsional) memaksa model tertentu |
+| `CRON_SECRET` | (opsional) kalau diisi, jadwal cadangan harus membawa rahasia ini |
 
 ## Menjalankan di komputer sendiri
 

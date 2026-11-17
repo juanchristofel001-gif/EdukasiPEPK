@@ -58,6 +58,12 @@ export const api = {
   simpan: (k: KegiatanInput) => req<{ kegiatan: Kegiatan }>('POST', '/api/kegiatan', k).then((r) => r.kegiatan),
   ubah: (id: string, k: KegiatanInput) => req<{ kegiatan: Kegiatan }>('PUT', '/api/kegiatan?id=' + encodeURIComponent(id), k).then((r) => r.kegiatan),
   hapus: (id: string) => req<{ dihapus: string }>('DELETE', '/api/kegiatan?id=' + encodeURIComponent(id)),
+  hapusPermanen: (id: string) => req<{ dihapus: string }>('DELETE', '/api/kegiatan?permanen=1&id=' + encodeURIComponent(id)),
+  sampah: () => req<{ kegiatan: (Kegiatan & { dihapus: string })[] }>('GET', '/api/kegiatan?sampah=1').then((r) => r.kegiatan),
+  pulihkan: (id: string) => req<{ dipulihkan: string }>('POST', '/api/kegiatan?pulihkan=' + encodeURIComponent(id)),
+  daftarCadangan: () => req<{ cadangan: { tanggal: string; dibuat: string; jumlah: number }[] }>('GET', '/api/cadangan').then((r) => r.cadangan),
+  unduhCadangan: (t: string) => req<unknown>('GET', '/api/cadangan?unduh=' + t),
+  buatCadangan: () => req<{ cadangan: string }>('POST', '/api/cadangan'),
   ekstrak: (b: { nama: string; teks?: string; gambar?: { mime: string; data: string }[] }) => req<{ isian: KegiatanInput; model: string }>('POST', '/api/ekstrak', b),
   insight: (dari: string, sampai: string, buat = false) =>
     req<{ insight: Insight | null }>(buat ? 'POST' : 'GET', `/api/insight?dari=${dari}&sampai=${sampai}`).then((r) => r.insight),

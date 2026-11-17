@@ -1,10 +1,13 @@
 // /api/kegiatan
-//   GET            → semua kegiatan (terbaru dulu)
-//   POST           → simpan kegiatan baru (body = isian)
-//   PUT    ?id=…   → ubah kegiatan
-//   DELETE ?id=…   → hapus kegiatan
+//   GET                    → semua kegiatan aktif (terbaru dulu)
+//   GET    ?sampah=1       → kegiatan di sampah
+//   POST                   → simpan kegiatan baru (body = isian)
+//   POST   ?pulihkan=id    → keluarkan kegiatan dari sampah
+//   PUT    ?id=…           → ubah kegiatan
+//   DELETE ?id=…           → pindahkan ke sampah
+//   DELETE ?id=…&permanen=1 → hapus permanen (hanya untuk yang sudah di sampah)
 import { izinkan, fail, ok, type Req, type Res } from './_lib/http.js';
-import { db, baru, DbError } from './_lib/db.js';
+import { db, baru, aktif, sampah, DbError } from './_lib/db.js';
 import { rapikan, periksa } from '../shared/schema.js';
 
 export default async function handler(req: Req, res: Res) {
@@ -14,8 +17,15 @@ export default async function handler(req: Req, res: Res) {
     const id = String(req.query.id || '');
     switch (req.method) {
       case 'GET':
-        return ok(res, { kegiatan: await s.list() });
+        return ok(res, { kegiatan: req.query.sampah ? await sampah() : await aktif() });
       case 'POST': {
+        const pul = String(req.query.pulihkan || '');
+        if (pul) {
+          const k = await s.get(pul);
+          if (!k) return fail(res, 404, 'Kegiatan tidak ditemukan.');
+          await s.put({ ...k, dihapus: null });
+          return ok(res, { dipulihkan: pul });
+        }
         const isian = rapikan(req.body || {});
         const salah = periksa(isian);
         if (salah.length) return fail(res, 400, salah.join(' '));
@@ -25,7 +35,7 @@ export default async function handler(req: Req, res: Res) {
       }
       case 'PUT': {
         const lama = id && (await s.get(id));
-        if (!lama) return fail(res, 404, 'Kegiatan tidak ditemukan. Mungkin sudah dihapus.');
+        if (!lama || lama.dihapus) return fail(res, 404, 'Kegiatan tidak ditemukan. Mungkin sudah dihapus.');
         const isian = rapikan(req.body || {});
         const salah = periksa(isian);
         if (salah.length) return fail(res, 400, salah.join(' '));
@@ -33,9 +43,17 @@ export default async function handler(req: Req, res: Res) {
         await s.put(k);
         return ok(res, { kegiatan: k });
       }
-      case 'DELETE':
-        if (!id || !(await s.remove(id))) return fail(res, 404, 'Kegiatan tidak ditemukan.');
+      case 'DELETE': {
+        const k = id && (await s.get(id));
+        if (!k) return fail(res, 404, 'Kegiatan tidak ditemukan.');
+        if (req.query.permanen) {
+          if (!k.dihapus) return fail(res, 400, 'Pindahkan ke sampah dulu sebelum menghapus permanen.');
+          await s.remove(id);
+          return ok(res, { dihapus: id, permanen: true });
+        }
+        await s.put({ ...k, dihapus: new Date().toISOString() });
         return ok(res, { dihapus: id });
+      }
       default:
         return fail(res, 405, 'Metode tidak didukung.');
     }
