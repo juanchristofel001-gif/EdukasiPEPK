@@ -226,6 +226,7 @@ input.ro { color: var(--mute); }
 .drop-ikon svg { width: 24px; height: 24px; }
 .drop strong { font-size: 16px; }
 .drop span { color: var(--mute); font-size: 13px; }
+.manual { display: flex; align-items: center; justify-content: center; gap: 12px; margin: -4px 0 18px; color: var(--mute); font-size: 13px; font-weight: 600; flex-wrap: wrap; }
 .kartu-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; }
 .fn { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
 .fn svg { width: 20px; height: 20px; color: var(--biru); flex: none; }

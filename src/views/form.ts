@@ -81,7 +81,7 @@ export function formHtml(k: KegiatanInput, opt: { tandaiAi?: boolean } = {}) {
     ${field('Ringkasan', `<textarea name="ringkasan" rows="2">${esc(k.ringkasan)}</textarea>`, { lebar: true })}
     ${field('Catatan lapangan', `<textarea name="catatan" rows="2" placeholder="Respons peserta, kendala, pertanyaan yang sering muncul">${esc(k.catatan)}</textarea>`, { lebar: true })}
     ${field('Dicatat oleh', `<input name="dicatatOleh" value="${esc(k.dicatatOleh)}" placeholder="Nama kamu (opsional)">`)}
-    ${field('File laporan asal', `<input name="sumberFile" value="${esc(k.sumberFile)}" readonly tabindex="-1" class="ro">`)}
+    ${k.sumberFile ? field('File laporan asal', `<input name="sumberFile" value="${esc(k.sumberFile)}" readonly tabindex="-1" class="ro">`) : ''}
   </div>
   <p class="galat" role="alert" hidden></p>
 </form>`;
