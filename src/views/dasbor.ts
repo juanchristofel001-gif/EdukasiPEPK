@@ -86,10 +86,14 @@ function isi(s: Statistik, semua: Kegiatan[], p: Periode, h: string) {
       <div class="hero-aksi"><button class="btn putih" id="salin">${IKON.salin}Salin status</button><a class="btn kaca" href="#/unggah">${IKON.unggah}Unggah laporan</a></div>
     </div>
     <div class="hero-stat">
-      <div><span>Peserta</span><b>${s.adaPerkiraan ? '<small>±</small>' : ''}${angka(s.peserta)}</b></div>
-      <div><span>Kab/kota terjangkau</span><b>${s.wilayahTerjangkau}<small>/${KABKOTA.length}</small></b></div>
-      <div><span>Kecamatan terjangkau</span><b>${s.kecamatanTerjangkau}<small>/${JUMLAH_KECAMATAN}</small></b></div>
-      <div><span>Belum dijangkau</span><b class="kecil">${belum.length ? belum.map((w) => esc(w.nama.replace('Kabupaten ', 'Kab. '))).join(', ') : 'Semua terjangkau'}</b></div>
+      <div><span>${IKON.orang}Peserta</span><b>${s.adaPerkiraan ? '<small>±</small>' : ''}${angka(s.peserta)}</b></div>
+      <div><span>${IKON.peta}Kab/kota terjangkau</span><b>${s.wilayahTerjangkau}<small>/${KABKOTA.length}</small></b></div>
+      <div><span>${IKON.pin}Kecamatan terjangkau</span><b>${s.kecamatanTerjangkau}<small>/${JUMLAH_KECAMATAN}</small></b></div>
+      <div><span>${IKON.target}Belum dijangkau</span>${
+        belum.length
+          ? `<div class="belum">${belum.map((w) => `<span class="bw" title="${esc(w.nama)}"><i data-ikon-putih="${esc(w.nama)}"></i>${esc(w.nama.replace('Kabupaten ', 'Kab. ').replace('Kota Tangerang Selatan', 'Tangsel'))}</span>`).join('')}</div>`
+          : '<b class="kecil">Semua terjangkau</b>'
+      }</div>
     </div>
   </section>
   <div class="dash">
@@ -183,6 +187,7 @@ async function pasangPeta(el: HTMLElement, s: Statistik) {
     return;
   }
   const maksKab = Math.max(0, ...s.perWilayah.map((w) => w.kegiatan));
+  $$('[data-ikon-putih]', el).forEach((i) => (i.innerHTML = ikonWilayah(wil, i.dataset.ikonPutih!, -1, { isi: 'rgba(255,255,255,.9)', garis: 'rgba(255,255,255,.9)' })));
   $$('.wl-ikon', el).forEach((i) => {
     const w = s.perWilayah.find((x) => x.nama === i.dataset.ikon);
     i.innerHTML = ikonWilayah(wil, i.dataset.ikon!, kelas(w?.kegiatan || 0, maksKab));
