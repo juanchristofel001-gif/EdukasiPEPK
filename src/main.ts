@@ -1,5 +1,7 @@
 // Titik masuk website: halaman kode akses, navigasi, dan pemilihan halaman berdasarkan alamat (#/…).
+import '@fontsource-variable/plus-jakarta-sans';
 import './style.css';
+import { LOGO, NAMA } from './merek.js';
 import { api, kode, saatKodeDitolak } from './api.js';
 import { lupakanData } from './data.js';
 import { esc, $ } from './ui.js';
@@ -17,7 +19,7 @@ const NAV = [
   ['#/kegiatan', 'Kegiatan', IKON.daftar],
 ] as const;
 
-const merek = `<a class="merek" href="#/dasbor"><span class="logo">${IKON.topi}</span><span class="bn"><b>Si<span>PEDULI</span>KU</b><small>Pencatatan Edukasi Literasi Keuangan</small></span></a>`;
+const merek = `<a class="merek" href="#/dasbor"><span class="logo">${LOGO}</span><span class="bn"><b aria-label="SiPEDULIKU">${NAMA}</b><small>Pencatatan Edukasi Literasi Keuangan</small></span></a>`;
 
 function kerangka() {
   app.innerHTML = `
@@ -59,8 +61,8 @@ function masuk(pesan = '') {
   <main class="masuk">
     <form id="fmasuk" class="kartu">
       <img class="ojk masuk-ojk" src="/logo-ojk.png" alt="Otoritas Jasa Keuangan" width="325" height="128">
-      <span class="logo besar">${IKON.topi}</span>
-      <h1>Si<span>PEDULI</span>KU</h1>
+      <span class="logo besar">${LOGO}</span>
+      <h1 aria-label="SiPEDULIKU">${NAMA}</h1>
       <p>Sistem Pencatatan Edukasi Literasi Keuangan, OJK Provinsi Banten. Masukkan kode akses tim.</p>
       <label class="field"><span class="lbl">Kode akses</span><input id="kode" type="password" autocomplete="current-password" required autofocus></label>
       <p class="galat" role="alert"${pesan ? '' : ' hidden'}>${esc(pesan)}</p>

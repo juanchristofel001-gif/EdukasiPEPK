@@ -39,7 +39,7 @@ http
     try {
       const d = await readFile(f);
       const ext = path.extname(f);
-      res.setHeader('Content-Type', { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.json': 'application/json' }[ext] || 'application/octet-stream');
+      res.setHeader('Content-Type', { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.css': 'text/css', '.woff2': 'font/woff2', '.svg': 'image/svg+xml', '.json': 'application/json' }[ext] || 'application/octet-stream');
       res.end(d);
     } catch {
       res.setHeader('Content-Type', 'text/html');
