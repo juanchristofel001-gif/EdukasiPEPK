@@ -89,12 +89,13 @@ const KOLOM: [string, (k: Kegiatan) => unknown][] = [
   ['Dicatat oleh', (k) => k.dicatatOleh],
 ];
 
-function csv(l: Kegiatan[]) {
+export function csv(l: (Kegiatan & { dihapus?: string | null })[], tandaiSampah = false) {
   const q = (v: unknown) => {
     const s = String(v ?? '');
     return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
-  return [KOLOM.map((c) => c[0]), ...l.map((k) => KOLOM.map((c) => c[1](k)))].map((r) => r.map(q).join(',')).join('\r\n');
+  const kol: [string, (k: Kegiatan & { dihapus?: string | null }) => unknown][] = tandaiSampah ? [...KOLOM, ['Di sampah', (k) => (k.dihapus ? 'ya' : '')]] : KOLOM;
+  return [kol.map((c) => c[0]), ...l.map((k) => kol.map((c) => c[1](k)))].map((r) => r.map(q).join(',')).join('\r\n');
 }
 
 export async function viewDetail(el: HTMLElement, id: string) {

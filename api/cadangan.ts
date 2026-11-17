@@ -3,8 +3,9 @@
 //   GET                     → daftar cadangan
 //   GET  ?unduh=YYYY-MM-DD  → isi satu cadangan (JSON)
 //   POST                    → buat cadangan sekarang
+//   POST ?pulihkan=…        → kembalikan data ke isi cadangan itu
 import { izinkan, fail, ok, type Req, type Res } from './_lib/http.js';
-import { db, buatCadangan, DbError } from './_lib/db.js';
+import { db, buatCadangan, pulihkanCadangan, DbError } from './_lib/db.js';
 
 function dariCron(req: Req) {
   const rahasia = process.env.CRON_SECRET;
@@ -20,11 +21,12 @@ export default async function handler(req: Req, res: Res) {
     }
     if (!izinkan(req, res)) return;
     const s = await db();
+    if (req.method === 'POST' && req.query.pulihkan) return ok(res, await pulihkanCadangan(String(req.query.pulihkan)));
     if (req.method === 'POST') return ok(res, { cadangan: await buatCadangan() });
     if (req.method !== 'GET') return fail(res, 405, 'Metode tidak didukung.');
     const t = String(req.query.unduh || '');
     if (t) {
-      const c = await s.ambilCadangan(t);
+      const c = await s.ambilCadangan(t.slice(0, 80));
       return c ? ok(res, c) : fail(res, 404, 'Cadangan tidak ditemukan.');
     }
     return ok(res, { cadangan: await s.daftarCadangan() });

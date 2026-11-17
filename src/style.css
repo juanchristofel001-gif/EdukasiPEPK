@@ -240,7 +240,7 @@ input.ro { color: var(--mute); }
 .sampah li:first-child { border-top: 0; }
 .sampah li > div:first-child { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 14px; }
 .sampah li span { color: var(--mute); font-size: 13px; }
-.aksi-baris { display: flex; gap: 8px; }
+.aksi-baris { display: flex; gap: 8px; flex-wrap: wrap; }
 .aksi-baris .btn { padding: 8px 14px; font-size: 13px; }
 
 /* ---------- form kegiatan ---------- */

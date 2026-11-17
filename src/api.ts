@@ -62,7 +62,8 @@ export const api = {
   sampah: () => req<{ kegiatan: (Kegiatan & { dihapus: string })[] }>('GET', '/api/kegiatan?sampah=1').then((r) => r.kegiatan),
   pulihkan: (id: string) => req<{ dipulihkan: string }>('POST', '/api/kegiatan?pulihkan=' + encodeURIComponent(id)),
   daftarCadangan: () => req<{ cadangan: { tanggal: string; dibuat: string; jumlah: number }[] }>('GET', '/api/cadangan').then((r) => r.cadangan),
-  unduhCadangan: (t: string) => req<unknown>('GET', '/api/cadangan?unduh=' + t),
+  unduhCadangan: (t: string) => req<{ kegiatan: (Kegiatan & { dihapus?: string | null })[] }>('GET', '/api/cadangan?unduh=' + encodeURIComponent(t)),
+  pulihkanCadangan: (t: string) => req<{ dipulihkan: number; disampahkan: number }>('POST', '/api/cadangan?pulihkan=' + encodeURIComponent(t)),
   buatCadangan: () => req<{ cadangan: string }>('POST', '/api/cadangan'),
   ekstrak: (b: { nama: string; teks?: string; gambar?: { mime: string; data: string }[] }) => req<{ isian: KegiatanInput; model: string }>('POST', '/api/ekstrak', b),
   insight: (dari: string, sampai: string, buat = false) =>

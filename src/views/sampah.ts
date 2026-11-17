@@ -4,6 +4,7 @@ import { api } from '../api.js';
 import { segarkanData } from '../data.js';
 import { esc, $, toast, unduh } from '../ui.js';
 import { IKON } from '../ikon.js';
+import { csv } from './daftar.js';
 
 export async function viewSampah(el: HTMLElement) {
   el.innerHTML = `<a class="teks kembali" href="#/kegiatan">← Semua kegiatan</a>
@@ -75,10 +76,10 @@ async function muatCadangan(el: HTMLElement) {
     box.innerHTML = l.length
       ? `<ul class="sampah">${l
           .map(
-            (c) => `<li><div><b>${tanggalPanjang(c.tanggal)}</b><span>${c.jumlah} kegiatan · dibuat ${new Date(c.dibuat).toLocaleTimeString('id-ID', {
+            (c) => `<li><div><b>${/^\d{4}-\d{2}-\d{2}$/.test(c.tanggal) ? tanggalPanjang(c.tanggal) : esc(tanggalPanjang(c.tanggal.slice(0, 10)) + c.tanggal.slice(10))}</b><span>${c.jumlah} kegiatan · dibuat ${new Date(c.dibuat).toLocaleTimeString('id-ID', {
               hour: '2-digit',
               minute: '2-digit',
-            })}</span></div><div class="aksi-baris"><button class="btn" data-unduh="${c.tanggal}">${IKON.unduh}Unduh</button></div></li>`,
+            })}</span></div><div class="aksi-baris"><button class="btn" data-unduh="${esc(c.tanggal)}">${IKON.unduh}Unduh Excel</button><button class="btn lembut" data-pulih="${esc(c.tanggal)}">${IKON.pulih}Pulihkan ke versi ini</button></div></li>`,
           )
           .join('')}</ul>`
       : '<p class="kosong-kecil">Belum ada cadangan. Cadangan pertama dibuat otomatis malam ini, atau tekan "Cadangkan sekarang".</p>';
@@ -87,15 +88,33 @@ async function muatCadangan(el: HTMLElement) {
     return;
   }
   box.onclick = async (e) => {
-    const b = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-unduh]');
-    if (!b) return;
-    b.disabled = true;
-    try {
-      const c = await api.unduhCadangan(b.dataset.unduh!);
-      unduh(`cadangan-edukasi-pepk-${b.dataset.unduh}.json`, JSON.stringify(c, null, 1), 'application/json');
-    } catch (err: any) {
-      toast(err.message, 'galat');
+    const t = e.target as HTMLElement;
+    const u = t.closest<HTMLButtonElement>('[data-unduh]');
+    const p = t.closest<HTMLButtonElement>('[data-pulih]');
+    if (u) {
+      u.disabled = true;
+      try {
+        const c = await api.unduhCadangan(u.dataset.unduh!);
+        unduh(`cadangan-edukasi-pepk-${u.dataset.unduh!.replace(/[^\w-]+/g, '-')}.csv`, csv(c.kegiatan, true));
+      } catch (err: any) {
+        toast(err.message, 'galat');
+      }
+      u.disabled = false;
     }
-    b.disabled = false;
+    if (p) {
+      const tgl = p.dataset.pulih!;
+      if (!confirm(`Kembalikan data ke cadangan ${tgl}?\n\nPerubahan setelah tanggal itu akan ditimpa. Kegiatan yang dibuat setelahnya tidak dihapus, hanya dipindah ke sampah. Kondisi sekarang dicadangkan dulu, jadi pemulihan ini juga bisa dibatalkan.`)) return;
+      p.disabled = true;
+      p.textContent = 'Memulihkan…';
+      try {
+        const r = await api.pulihkanCadangan(tgl);
+        await segarkanData();
+        toast(`Data dipulihkan (${r.dipulihkan} kegiatan${r.disampahkan ? `, ${r.disampahkan} kegiatan baru dipindah ke sampah` : ''}).`);
+      } catch (err: any) {
+        toast(err.message, 'galat');
+      }
+      muatSampah(el);
+      muatCadangan(el);
+    }
   };
 }

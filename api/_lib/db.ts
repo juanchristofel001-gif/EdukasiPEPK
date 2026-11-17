@@ -187,6 +187,23 @@ export async function buatCadangan() {
   return tanggal;
 }
 
+// Kembalikan data ke isi satu cadangan. Aman: kegiatan yang dibuat setelah cadangan itu
+// tidak dihapus, hanya dipindah ke sampah; kondisi sekarang dicadangkan dulu.
+export async function pulihkanCadangan(tanggal: string) {
+  const s = await db();
+  const c = await s.ambilCadangan(tanggal);
+  if (!c) throw new DbError('Cadangan tidak ditemukan.', 404);
+  const sekarang = await s.semua();
+  const waktu = new Date(Date.now() + 7 * 3600e3).toISOString();
+  await s.simpanCadangan({ tanggal: `${waktu.slice(0, 10)} sebelum pemulihan ${waktu.slice(11, 16).replace(':', '.')}`, dibuat: new Date().toISOString(), jumlah: sekarang.filter((k) => !k.dihapus).length, kegiatan: sekarang });
+  const ada = new Set(c.kegiatan.map((k) => k.id));
+  for (const k of c.kegiatan as Baris[]) await s.put(k);
+  const kini = new Date().toISOString();
+  let disampahkan = 0;
+  for (const k of sekarang) if (!ada.has(k.id) && !k.dihapus) (await s.put({ ...k, dihapus: kini }), disampahkan++);
+  return { dipulihkan: c.kegiatan.length, disampahkan };
+}
+
 export function baru(input: KegiatanInput): Kegiatan {
   const now = new Date().toISOString();
   return { ...input, id: randomUUID(), dibuat: now, diubah: now };
