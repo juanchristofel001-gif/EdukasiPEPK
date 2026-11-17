@@ -19,8 +19,8 @@ export const muatPeta = () =>
     })
     .then((j) => j as Geo));
 
-// Warna berurutan satu rona (biru), terang = sedikit, gelap = banyak.
-export const SKALA = ['#dbe7f7', '#a9c6ec', '#6e9fdb', '#3a72bd', '#1b4a8a'];
+// Warna berurutan satu rona (merah OJK), terang = sedikit, gelap = banyak.
+export const SKALA = ['#fbdde2', '#f4a6b3', '#e5677d', '#c8102e', '#8a0a20'];
 export const KOSONG = '#ecebf0';
 
 export type Ukuran = 'kegiatan' | 'peserta';

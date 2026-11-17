@@ -1,6 +1,6 @@
-# Edukasi PEPK
+# SiPEDULIKU
 
-Pencatatan dan dasbor kegiatan edukasi keuangan OJK Provinsi Banten.
+**Si**stem **Pe**ncatatan **Edu**kasi **Li**terasi **Keu**angan — pencatatan dan dasbor kegiatan edukasi keuangan OJK Provinsi Banten.
 
 Tim mengunggah laporan kegiatan (PDF, Word, atau foto). AI membaca laporan dan mengisi data kegiatan. Tim mengecek dan menyimpannya. Dasbor lalu menampilkan posisi terkini: jumlah kegiatan, peserta, sebaran 8 kabupaten/kota dan 155 kecamatan (peta panas), sasaran, topik, dan insight AI. Tombol **Salin status** menghasilkan ringkasan siap tempel untuk WhatsApp atau email.
 

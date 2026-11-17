@@ -62,7 +62,7 @@ export async function viewDaftar(el: HTMLElement) {
     const tr = (e.target as HTMLElement).closest<HTMLElement>('tr[data-id]');
     if (tr && e.key === 'Enter') location.hash = '#/kegiatan/' + tr.dataset.id;
   };
-  $('#csv', el).onclick = () => unduh(`kegiatan-edukasi-${new Date().toISOString().slice(0, 10)}.csv`, csv(semua));
+  $('#csv', el).onclick = () => unduh(`sipeduliku-kegiatan-${new Date().toISOString().slice(0, 10)}.csv`, csv(semua));
 }
 
 const KOLOM: [string, (k: Kegiatan) => unknown][] = [

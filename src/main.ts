@@ -17,7 +17,7 @@ const NAV = [
   ['#/kegiatan', 'Kegiatan', IKON.daftar],
 ] as const;
 
-const merek = `<a class="merek" href="#/dasbor"><span class="logo">${IKON.topi}</span><span class="bn"><b>Edukasi <span>PEPK</span></b><small>OJK Provinsi Banten</small></span></a>`;
+const merek = `<a class="merek" href="#/dasbor"><span class="logo">${IKON.topi}</span><span class="bn"><b>Si<span>PEDULI</span>KU</b><small>Pencatatan Edukasi Literasi Keuangan</small></span></a>`;
 
 function kerangka() {
   app.innerHTML = `
@@ -58,8 +58,8 @@ function masuk(pesan = '') {
   <main class="masuk">
     <form id="fmasuk" class="kartu">
       <span class="logo besar">${IKON.topi}</span>
-      <h1>Edukasi <span>PEPK</span></h1>
-      <p>Pencatatan kegiatan edukasi keuangan OJK Provinsi Banten. Masukkan kode akses tim.</p>
+      <h1>Si<span>PEDULI</span>KU</h1>
+      <p>Sistem Pencatatan Edukasi Literasi Keuangan, OJK Provinsi Banten. Masukkan kode akses tim.</p>
       <label class="field"><span class="lbl">Kode akses</span><input id="kode" type="password" autocomplete="current-password" required autofocus></label>
       <p class="galat" role="alert"${pesan ? '' : ' hidden'}>${esc(pesan)}</p>
       <button class="btn utama penuh">Masuk</button>

@@ -95,7 +95,7 @@ async function muatCadangan(el: HTMLElement) {
       u.disabled = true;
       try {
         const c = await api.unduhCadangan(u.dataset.unduh!);
-        unduh(`cadangan-edukasi-pepk-${u.dataset.unduh!.replace(/[^\w-]+/g, '-')}.csv`, csv(c.kegiatan, true));
+        unduh(`cadangan-sipeduliku-${u.dataset.unduh!.replace(/[^\w-]+/g, '-')}.csv`, csv(c.kegiatan, true));
       } catch (err: any) {
         toast(err.message, 'galat');
       }
