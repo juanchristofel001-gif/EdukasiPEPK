@@ -18,7 +18,8 @@
   "homepage": "https://github.com/juanchristofel001-gif/edukasipepk#readme",
   "dependencies": {
     "firebase-admin": "^13.10.0",
-    "mammoth": "^1.13.0"
+    "mammoth": "^1.13.0",
+    "pdfjs-dist": "^6.5.438"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

@@ -58,7 +58,7 @@ export const api = {
   simpan: (k: KegiatanInput) => req<{ kegiatan: Kegiatan }>('POST', '/api/kegiatan', k).then((r) => r.kegiatan),
   ubah: (id: string, k: KegiatanInput) => req<{ kegiatan: Kegiatan }>('PUT', '/api/kegiatan?id=' + encodeURIComponent(id), k).then((r) => r.kegiatan),
   hapus: (id: string) => req<{ dihapus: string }>('DELETE', '/api/kegiatan?id=' + encodeURIComponent(id)),
-  ekstrak: (b: { nama: string; mime?: string; data?: string; teks?: string }) => req<{ isian: KegiatanInput; model: string }>('POST', '/api/ekstrak', b),
+  ekstrak: (b: { nama: string; teks?: string; gambar?: { mime: string; data: string }[] }) => req<{ isian: KegiatanInput; model: string }>('POST', '/api/ekstrak', b),
   insight: (dari: string, sampai: string, buat = false) =>
     req<{ insight: Insight | null }>(buat ? 'POST' : 'GET', `/api/insight?dari=${dari}&sampai=${sampai}`).then((r) => r.insight),
 };

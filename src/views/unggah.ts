@@ -4,6 +4,7 @@ import { periksa, type KegiatanInput } from '../../shared/schema.js';
 import { esc, $, toast } from '../ui.js';
 import { formHtml, bacaForm, tampilGalat } from './form.js';
 import { segarkanData } from '../data.js';
+import { siapkan } from '../baca-file.js';
 
 type Item = { id: number; nama: string; status: 'baca' | 'cek' | 'gagal' | 'tersimpan'; isian?: KegiatanInput; galat?: string };
 let antrean: Item[] = [];
@@ -18,7 +19,7 @@ export function viewUnggah(el: HTMLElement) {
   <label class="drop" id="drop">
     <input type="file" id="file" accept="${TERIMA}" multiple>
     <strong>Pilih file laporan</strong>
-    <span>atau tarik ke sini · PDF, Word (.docx), atau foto · maksimal 4 MB per file</span>
+    <span>atau tarik ke sini · PDF, Word (.docx), atau foto · foto dokumentasi di dalamnya tidak masalah</span>
   </label>
   <div id="antrean"></div>`;
   const input = $<HTMLInputElement>('#file', el);
@@ -123,22 +124,6 @@ function tambah(files: File[]) {
   gambar();
 }
 
-async function baca(f: File): Promise<{ nama: string; mime?: string; data?: string; teks?: string }> {
-  const ext = f.name.toLowerCase().split('.').pop() || '';
-  if (f.size > 4 * 1024 * 1024 && ext !== 'docx') throw new Error('File lebih dari 4 MB. Perkecil atau ekspor ulang PDF-nya.');
-  if (ext === 'docx') {
-    const mammoth: any = await import('mammoth');
-    const r = await (mammoth.default || mammoth).extractRawText({ arrayBuffer: await f.arrayBuffer() });
-    if (!r.value.trim()) throw new Error('Dokumen Word ini kosong atau tidak terbaca.');
-    return { nama: f.name, teks: r.value };
-  }
-  const mime = f.type || (ext === 'pdf' ? 'application/pdf' : ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg');
-  if (!/^(application\/pdf|image\/(jpeg|png|webp))$/.test(mime)) throw new Error('Format belum didukung. Gunakan PDF, Word (.docx), JPG, atau PNG.');
-  const data = await new Promise<string>((ok, no) => {
-    const r = new FileReader();
-    r.onload = () => ok(String(r.result).split(',')[1] || '');
-    r.onerror = () => no(new Error('File tidak bisa dibaca.'));
-    r.readAsDataURL(f);
-  });
-  return { nama: f.name, mime, data };
+async function baca(f: File) {
+  return siapkan(f);
 }

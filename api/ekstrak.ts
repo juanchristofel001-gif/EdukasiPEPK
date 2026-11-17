@@ -1,10 +1,11 @@
-// POST /api/ekstrak — membaca satu laporan kegiatan (PDF, gambar, atau teks dari Word)
+// POST /api/ekstrak — membaca satu laporan kegiatan. Browser sudah mengubah file menjadi teks
+// (PDF/Word) atau gambar kecil (scan/foto), lihat src/baca-file.ts.
 // dan mengembalikan isian kegiatan untuk dicek tim. Tidak menyimpan apa pun.
 import { izinkan, fail, ok, type Req, type Res } from './_lib/http.js';
 import { generate, parseJson, GeminiError, type Part } from './_lib/gemini.js';
 import { KABKOTA, KABKOTA_LAIN, MODE, PERAN_OJK, SASARAN, TOPIK, KANAL, METODE, rapikan } from '../shared/schema.js';
 
-const MIME = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+const MIME = ['image/jpeg', 'image/png', 'image/webp'];
 const MAKS = 4 * 1024 * 1024; // batas body Vercel 4,5 MB
 
 const daftar = (l: readonly string[]) => l.map((x) => `"${x}"`).join(', ');
@@ -63,16 +64,17 @@ const CONTOH = {
 export default async function handler(req: Req, res: Res) {
   if (req.method !== 'POST') return fail(res, 405, 'Gunakan POST.');
   if (!izinkan(req, res)) return;
-  const b = (req.body || {}) as { nama?: string; mime?: string; data?: string; teks?: string };
+  const b = (req.body || {}) as { nama?: string; teks?: string; gambar?: { mime?: string; data?: string }[] };
   const nama = String(b.nama || 'laporan').slice(0, 200);
   const parts: Part[] = [{ text: PROMPT }];
+  const gambar = Array.isArray(b.gambar) ? b.gambar.slice(0, 8) : [];
   if (typeof b.teks === 'string' && b.teks.trim()) {
     parts.push({ text: 'Isi laporan:\n' + b.teks.slice(0, 60000) });
-  } else if (typeof b.data === 'string' && MIME.includes(String(b.mime))) {
-    if (b.data.length * 0.75 > MAKS) return fail(res, 413, 'File terlalu besar (maksimal 4 MB). Perkecil atau ekspor ulang PDF-nya.');
-    parts.push({ inline_data: { mime_type: String(b.mime), data: b.data } });
+  } else if (gambar.length && gambar.every((g) => MIME.includes(String(g.mime)) && typeof g.data === 'string')) {
+    if (gambar.reduce((s, g) => s + String(g.data).length * 0.75, 0) > MAKS) return fail(res, 413, 'Gambar laporan terlalu besar. Coba unggah ulang.');
+    for (const g of gambar) parts.push({ inline_data: { mime_type: String(g.mime), data: String(g.data) } });
   } else {
-    return fail(res, 400, 'Format file belum didukung. Gunakan PDF, Word (.docx), JPG, atau PNG.');
+    return fail(res, 400, 'Isi laporan tidak terbaca. Gunakan PDF, Word (.docx), JPG, atau PNG.');
   }
 
   try {
