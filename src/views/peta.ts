@@ -20,15 +20,22 @@ export const muatPeta = () =>
     .then((j) => j as Geo));
 
 // Warna berurutan satu rona (merah OJK), terang = sedikit, gelap = banyak.
-export const SKALA = ['#fbdde2', '#f4a6b3', '#e5677d', '#c8102e', '#8a0a20'];
+export const SKALA = ['#f5b4c0', '#ea7b8f', '#d9415c', '#c8102e', '#8a0a20'];
 export const KOSONG = '#ecebf0';
 
 export type Ukuran = 'kegiatan' | 'peserta';
 
+// Kelas warna untuk satu nilai. Selama nilai maksimum masih kecil (≤ 5), warna diambil dari
+// ujung yang tua supaya 1 kegiatan pun jelas terlihat (1 dari 1 = merah OJK, bukan merah muda).
 export function kelas(nilai: number, maks: number) {
   if (!nilai) return -1;
-  if (maks <= SKALA.length) return Math.min(SKALA.length - 1, Math.round(((nilai - 1) / Math.max(1, maks - 1)) * (SKALA.length - 1)));
-  return Math.min(SKALA.length - 1, Math.floor((nilai / maks) * SKALA.length - 1e-9));
+  const n = SKALA.length;
+  if (maks <= n) {
+    if (maks === 1) return 3;
+    const awal = Math.max(0, n - maks);
+    return Math.min(n - 1, awal + Math.round(((nilai - 1) / (maks - 1)) * (n - 1 - awal)));
+  }
+  return Math.min(n - 1, Math.floor((nilai / maks) * n - 1e-9));
 }
 
 export function batasLegenda(maks: number): string[] {
