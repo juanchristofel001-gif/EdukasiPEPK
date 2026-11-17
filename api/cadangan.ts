@@ -4,7 +4,7 @@
 //   GET  ?unduh=YYYY-MM-DD  → isi satu cadangan (JSON)
 //   POST                    → buat cadangan sekarang
 //   POST ?pulihkan=…        → kembalikan data ke isi cadangan itu
-import { izinkan, fail, ok, type Req, type Res } from './_lib/http.js';
+import { izinkan, fail, ok, namaPengguna, type Req, type Res } from './_lib/http.js';
 import { db, buatCadangan, pulihkanCadangan, DbError } from './_lib/db.js';
 
 function dariCron(req: Req) {
@@ -21,7 +21,7 @@ export default async function handler(req: Req, res: Res) {
     }
     if (!izinkan(req, res)) return;
     const s = await db();
-    if (req.method === 'POST' && req.query.pulihkan) return ok(res, await pulihkanCadangan(String(req.query.pulihkan)));
+    if (req.method === 'POST' && req.query.pulihkan) return ok(res, await pulihkanCadangan(String(req.query.pulihkan), namaPengguna(req)));
     if (req.method === 'POST') return ok(res, { cadangan: await buatCadangan() });
     if (req.method !== 'GET') return fail(res, 405, 'Metode tidak didukung.');
     const t = String(req.query.unduh || '');

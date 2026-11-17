@@ -159,3 +159,47 @@ export function periksa(k: KegiatanInput): string[] {
   if (!k.sasaran.length) e.push('Pilih minimal satu sasaran peserta.');
   return e;
 }
+
+// Nama kolom yang mudah dibaca, dipakai untuk log riwayat perubahan.
+export const LABEL: Partial<Record<keyof KegiatanInput, string>> = {
+  judul: 'Judul',
+  tema: 'Tema',
+  pengundang: 'Pengundang/mitra',
+  peranOjk: 'Peran OJK',
+  tanggal: 'Tanggal',
+  tempat: 'Tempat',
+  kabkota: 'Kabupaten/kota',
+  kecamatan: 'Kecamatan',
+  mode: 'Mode',
+  narasumber: 'Narasumber',
+  sasaran: 'Sasaran',
+  sasaranDetail: 'Keterangan peserta',
+  peserta: 'Jumlah peserta',
+  pesertaPerkiraan: 'Peserta perkiraan',
+  topik: 'Topik',
+  kanal: 'Kanal',
+  metode: 'Metode',
+  ringkasan: 'Ringkasan',
+  catatan: 'Catatan lapangan',
+  dicatatOleh: 'Dicatat oleh',
+};
+
+export type Aksi = 'tambah' | 'ubah' | 'sampah' | 'pulihkan' | 'hapus-permanen' | 'pulihkan-cadangan';
+export type Riwayat = {
+  id: string;
+  waktu: string; // ISO
+  aksi: Aksi;
+  oleh: string; // nama yang diisi di perangkat (bukan login, jadi tidak terverifikasi)
+  kegiatanId: string;
+  judul: string;
+  perubahan?: { kolom: string; dari: string; jadi: string }[];
+  catatan?: string;
+};
+
+const tampil = (v: unknown) => (Array.isArray(v) ? v.join(', ') : typeof v === 'boolean' ? (v ? 'ya' : 'tidak') : v === null || v === undefined ? '' : String(v));
+// Daftar kolom yang berubah antara dua versi kegiatan.
+export function beda(lama: Partial<KegiatanInput>, baru: Partial<KegiatanInput>) {
+  return (Object.keys(LABEL) as (keyof KegiatanInput)[])
+    .filter((k) => tampil(lama[k]) !== tampil(baru[k]))
+    .map((k) => ({ kolom: LABEL[k]!, dari: tampil(lama[k]).slice(0, 300), jadi: tampil(baru[k]).slice(0, 300) }));
+}

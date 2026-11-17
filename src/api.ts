@@ -1,5 +1,5 @@
 // Semua panggilan ke server lewat sini. Kode akses disimpan di perangkat dan dikirim di setiap permintaan.
-import type { Kegiatan, KegiatanInput } from '../shared/schema.js';
+import type { Kegiatan, KegiatanInput, Riwayat } from '../shared/schema.js';
 import type { Insight } from '../api/insight.js';
 
 const KUNCI = 'edukasi-pepk:kode';
@@ -24,6 +24,23 @@ export const kode = {
   },
 };
 
+const KUNCI_NAMA = 'edukasi-pepk:nama';
+// Nama orang yang memakai perangkat ini, untuk log riwayat (diisi sekali saat masuk).
+export const nama = {
+  get: () => {
+    try {
+      return localStorage.getItem(KUNCI_NAMA) || '';
+    } catch {
+      return '';
+    }
+  },
+  set: (v: string) => {
+    try {
+      localStorage.setItem(KUNCI_NAMA, v.trim().slice(0, 60));
+    } catch {}
+  },
+};
+
 export class ApiError extends Error {
   constructor(msg: string, public status: number) {
     super(msg);
@@ -38,7 +55,7 @@ async function req<T>(method: string, url: string, body?: unknown, kodeKhusus?: 
   try {
     r = await fetch(url, {
       method,
-      headers: { 'x-kode-akses': kodeKhusus ?? kode.get(), ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      headers: { 'x-kode-akses': kodeKhusus ?? kode.get(), 'x-nama': encodeURIComponent(nama.get()), ...(body ? { 'Content-Type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
     });
   } catch {
@@ -64,6 +81,7 @@ export const api = {
   daftarCadangan: () => req<{ cadangan: { tanggal: string; dibuat: string; jumlah: number }[] }>('GET', '/api/cadangan').then((r) => r.cadangan),
   unduhCadangan: (t: string) => req<{ kegiatan: (Kegiatan & { dihapus?: string | null })[] }>('GET', '/api/cadangan?unduh=' + encodeURIComponent(t)),
   pulihkanCadangan: (t: string) => req<{ dipulihkan: number; disampahkan: number }>('POST', '/api/cadangan?pulihkan=' + encodeURIComponent(t)),
+  riwayat: (id?: string) => req<{ riwayat: Riwayat[] }>('GET', '/api/riwayat' + (id ? '?id=' + encodeURIComponent(id) : '')).then((r) => r.riwayat),
   buatCadangan: () => req<{ cadangan: string }>('POST', '/api/cadangan'),
   ekstrak: (b: { nama: string; teks?: string; gambar?: { mime: string; data: string }[] }) => req<{ isian: KegiatanInput; model: string }>('POST', '/api/ekstrak', b),
   insight: (dari: string, sampai: string, buat = false) =>

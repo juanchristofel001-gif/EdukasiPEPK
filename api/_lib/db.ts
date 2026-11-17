@@ -5,7 +5,7 @@
 import { randomUUID } from 'node:crypto';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import type { Kegiatan, KegiatanInput } from '../../shared/schema.js';
+import type { Kegiatan, KegiatanInput, Riwayat } from '../../shared/schema.js';
 
 export class DbError extends Error {
   constructor(msg: string, public status = 503) {
@@ -30,6 +30,8 @@ interface Store {
   daftarCadangan(): Promise<Omit<Cadangan, 'kegiatan'>[]>;
   ambilCadangan(tanggal: string): Promise<Cadangan | null>;
   hapusCadangan(tanggal: string): Promise<void>;
+  catat(r: Riwayat): Promise<void>;
+  riwayat(batas: number): Promise<Riwayat[]>; // terbaru dulu
 }
 
 let store: Store | null = null;
@@ -88,6 +90,13 @@ async function firestore(): Promise<Store> {
     async hapusCadangan(t) {
       await cad.doc(t).delete();
     },
+    async catat(r) {
+      await db.collection('riwayat').doc(r.id).set(r);
+    },
+    async riwayat(batas) {
+      const s = await db.collection('riwayat').orderBy('waktu', 'desc').limit(batas).get();
+      return s.docs.map((d) => d.data() as Riwayat);
+    },
   };
 }
 
@@ -107,6 +116,7 @@ function lokal(): Store {
     await fs.writeFile(f, JSON.stringify(v, null, 1));
   };
   const cfile = path.join(dir, 'cadangan.json');
+  const rfile = path.join(dir, 'riwayat.json');
   return {
     async semua() {
       return read<Baris[]>(file, []);
@@ -152,6 +162,14 @@ function lokal(): Store {
       delete m[t];
       await write(cfile, m);
     },
+    async catat(r) {
+      const l = await read<Riwayat[]>(rfile, []);
+      l.push(r);
+      await write(rfile, l);
+    },
+    async riwayat(batas) {
+      return (await read<Riwayat[]>(rfile, [])).sort((a, b) => b.waktu.localeCompare(a.waktu)).slice(0, batas);
+    },
   };
 }
 
@@ -189,7 +207,7 @@ export async function buatCadangan() {
 
 // Kembalikan data ke isi satu cadangan. Aman: kegiatan yang dibuat setelah cadangan itu
 // tidak dihapus, hanya dipindah ke sampah; kondisi sekarang dicadangkan dulu.
-export async function pulihkanCadangan(tanggal: string) {
+export async function pulihkanCadangan(tanggal: string, oleh = '') {
   const s = await db();
   const c = await s.ambilCadangan(tanggal);
   if (!c) throw new DbError('Cadangan tidak ditemukan.', 404);
@@ -201,7 +219,17 @@ export async function pulihkanCadangan(tanggal: string) {
   const kini = new Date().toISOString();
   let disampahkan = 0;
   for (const k of sekarang) if (!ada.has(k.id) && !k.dihapus) (await s.put({ ...k, dihapus: kini }), disampahkan++);
+  await catat({ aksi: 'pulihkan-cadangan', oleh, kegiatanId: '', judul: `Cadangan ${tanggal}`, catatan: `${c.kegiatan.length} kegiatan dipulihkan${disampahkan ? `, ${disampahkan} kegiatan baru dipindah ke sampah` : ''}` });
   return { dipulihkan: c.kegiatan.length, disampahkan };
+}
+
+// Catat satu aktivitas ke log riwayat. Kegagalan mencatat tidak membatalkan perubahan datanya.
+export async function catat(r: Omit<Riwayat, 'id' | 'waktu'>) {
+  try {
+    await (await db()).catat({ ...r, id: `${Date.now()}-${randomUUID().slice(0, 8)}`, waktu: new Date().toISOString() });
+  } catch (e) {
+    console.error('[riwayat] gagal mencatat', e);
+  }
 }
 
 export function baru(input: KegiatanInput): Kegiatan {

@@ -16,6 +16,7 @@ Fungsi server Vercel (folder api/)
    ├─ api/akses.ts     cek kode akses
    ├─ api/ekstrak.ts   kirim laporan ke Gemini → isian kegiatan (tidak menyimpan apa pun)
    ├─ api/kegiatan.ts  baca / simpan / ubah kegiatan; hapus = pindah ke sampah, bisa dipulihkan
+   ├─ api/riwayat.ts   log aktivitas: siapa menambah/mengubah/menghapus/memulihkan, kolom apa berubah
    ├─ api/cadangan.ts  cadangan harian seluruh data (Vercel Cron 00.00 WIB, 30 hari disimpan)
    └─ api/insight.ts   hitung rekap dari database → Gemini menafsirkan → disimpan
    │
@@ -23,7 +24,7 @@ Fungsi server Vercel (folder api/)
    └──► Gemini API (Google AI Studio)
 ```
 
-Koleksi Firestore: `kegiatan` (data, termasuk yang di sampah dengan kolom `dihapus`), `cadangan` (satu dokumen per tanggal), `meta` (insight AI).
+Koleksi Firestore: `kegiatan` (data, termasuk yang di sampah dengan kolom `dihapus`), `cadangan` (satu dokumen per tanggal), `meta` (insight AI), `riwayat` (log aktivitas; nama berasal dari header `x-nama` yang diisi di tiap perangkat, belum terverifikasi login).
 
 ```
 ```

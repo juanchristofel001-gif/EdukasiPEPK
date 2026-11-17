@@ -1,5 +1,5 @@
 // Halaman "Unggah laporan": pilih satu atau beberapa file → AI membaca → tim cek → simpan.
-import { api } from '../api.js';
+import { api, nama } from '../api.js';
 import { periksa, type KegiatanInput } from '../../shared/schema.js';
 import { esc, $, toast } from '../ui.js';
 import { formHtml, bacaForm, tampilGalat, pasangForm } from './form.js';
@@ -84,10 +84,10 @@ function gambar() {
   };
 }
 
-function kosong(nama: string): KegiatanInput {
+function kosong(namaFile: string): KegiatanInput {
   return {
     judul: '', tema: '', pengundang: '', peranOjk: '', tanggal: '', tempat: '', kabkota: '', kabkotaDitebak: false, kecamatan: '', kecamatanDitebak: false, mode: '', narasumber: [],
-    sasaran: [], sasaranDetail: '', peserta: null, pesertaPerkiraan: false, topik: [], kanal: [], metode: [], ringkasan: '', catatan: '', sumberFile: nama, dicatatOleh: '',
+    sasaran: [], sasaranDetail: '', peserta: null, pesertaPerkiraan: false, topik: [], kanal: [], metode: [], ringkasan: '', catatan: '', sumberFile: namaFile, dicatatOleh: nama.get(),
   };
 }
 
@@ -122,7 +122,7 @@ function tambah(files: File[]) {
       .then((body) => api.ekstrak(body))
       .then((r) => {
         it.status = 'cek';
-        it.isian = r.isian;
+        it.isian = { ...r.isian, dicatatOleh: r.isian.dicatatOleh || nama.get() };
       })
       .catch((e) => {
         it.status = 'gagal';

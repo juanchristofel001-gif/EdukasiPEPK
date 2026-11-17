@@ -31,3 +31,13 @@ export function izinkan(req: Req, res: Res): boolean {
   }
   return true;
 }
+
+// Nama yang diisi pengguna di perangkatnya (header x-nama). Belum ada login, jadi ini
+// hanya label untuk log riwayat, bukan identitas yang terverifikasi.
+export function namaPengguna(req: Req) {
+  try {
+    return decodeURIComponent(String(req.headers['x-nama'] || '')).trim().slice(0, 60) || 'Tanpa nama';
+  } catch {
+    return 'Tanpa nama';
+  }
+}
