@@ -1,0 +1,35 @@
+{
+  "name": "edukasi-pepk",
+  "version": "1.0.0",
+  "description": "Pencatatan dan dasbor kegiatan edukasi keuangan OJK Provinsi Banten",
+  "scripts": {
+    "dev": "vite",
+    "dev:api": "tsx scripts/dev-api.ts",
+    "build": "tsc && vite build",
+    "cek": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/juanchristofel001-gif/edukasipepk.git"
+  },
+  "bugs": {
+    "url": "https://github.com/juanchristofel001-gif/edukasipepk/issues"
+  },
+  "homepage": "https://github.com/juanchristofel001-gif/edukasipepk#readme",
+  "dependencies": {
+    "firebase-admin": "^13.10.0",
+    "mammoth": "^1.13.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@vercel/node": "^31.0.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  },
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  }
+}

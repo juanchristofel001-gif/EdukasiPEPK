@@ -1,0 +1,84 @@
+# Edukasi PEPK
+
+Pencatatan dan dasbor kegiatan edukasi keuangan OJK Provinsi Banten.
+
+Tim mengunggah laporan kegiatan (PDF, Word, atau foto). AI membaca laporan dan mengisi data kegiatan. Tim mengecek dan menyimpannya. Dasbor lalu menampilkan posisi terkini: jumlah kegiatan, peserta, sebaran 8 kabupaten/kota, sasaran, topik, dan insight AI. Tombol **Salin status** menghasilkan ringkasan siap tempel untuk WhatsApp atau email.
+
+File laporan asli **tidak disimpan**. Yang disimpan hanya data hasil ekstraksi yang sudah dicek tim.
+
+## Arsitektur
+
+```
+Browser (Vite + TypeScript)
+   │  setiap permintaan membawa kode akses tim (header x-kode-akses)
+   ▼
+Fungsi server Vercel (folder api/)
+   ├─ api/akses.ts     cek kode akses
+   ├─ api/ekstrak.ts   kirim laporan ke Gemini → isian kegiatan (tidak menyimpan apa pun)
+   ├─ api/kegiatan.ts  baca / simpan / ubah / hapus kegiatan
+   └─ api/insight.ts   hitung rekap dari database → Gemini menafsirkan → disimpan
+   │
+   ├──► Firestore (Firebase): koleksi `kegiatan` dan `meta`
+   └──► Gemini API (Google AI Studio)
+```
+
+- Browser **tidak pernah** mengakses Firestore atau Gemini secara langsung. Semua kunci rahasia hanya ada di server.
+- `firestore.rules` menutup semua akses langsung ke database.
+- Akses dikendalikan satu fungsi, `izinkan()` di `api/_lib/http.ts`. Kalau nanti pindah ke login pribadi, cukup fungsi itu yang diganti.
+
+## Struktur folder
+
+| Folder | Isi |
+|---|---|
+| `shared/schema.ts` | **Model data**: kolom kegiatan, daftar pilihan (kab/kota, sasaran, topik, dll.), aturan validasi. Dipakai server dan browser. |
+| `shared/statistik.ts` | Perhitungan rekap (per wilayah, per bulan, dll.) dan teks "Salin status". |
+| `api/` | Fungsi server. `api/_lib/` berisi koneksi Gemini, database, dan pengecekan kode akses. |
+| `src/` | Tampilan website. `src/views/` satu file per halaman. |
+| `scripts/dev-api.ts` | Server lokal untuk menjalankan `api/` tanpa Vercel. |
+
+## Model data: satu kegiatan
+
+| Kolom | Tipe | Keterangan |
+|---|---|---|
+| `judul`* | teks | Nama kegiatan |
+| `tema` | teks | Judul materi |
+| `pengundang` | teks | Lembaga/acara yang mengundang atau bermitra |
+| `peranOjk` | pilihan | Penyelenggara · Narasumber undangan · Kolaborasi dengan mitra |
+| `tanggal`* | YYYY-MM-DD | |
+| `tempat` | teks | |
+| `kabkota`* | pilihan | 8 kab/kota Banten, Daring, atau Luar Banten |
+| `kabkotaDitebak` | ya/tidak | Wilayah tidak tertulis di laporan dan ditebak AI |
+| `mode` | pilihan | Luring · Daring · Hybrid |
+| `narasumber` | daftar teks | |
+| `sasaran`* | daftar pilihan | Pelajar, mahasiswa, UMKM, dll. |
+| `sasaranDetail` | teks | Misal "Siswa kelas XII" |
+| `peserta`* | angka | |
+| `pesertaPerkiraan` | ya/tidak | Laporan menulis "kurang lebih", "sekitar" |
+| `topik` | daftar pilihan | Materi yang dibawakan |
+| `kanal` | daftar pilihan | 157, IASC, SIPASTI, dll. |
+| `metode` | daftar pilihan | Paparan, diskusi, kuis, dll. |
+| `ringkasan`, `catatan` | teks | Ringkasan dan catatan lapangan |
+| `sumberFile`, `dicatatOleh` | teks | Asal data |
+
+\* wajib. Daftar pilihan diubah di `shared/schema.ts`.
+
+## Pengaturan di Vercel (Environment Variables)
+
+| Nama | Isi |
+|---|---|
+| `KODE_AKSES` | Kode akses tim. Ganti kapan saja; semua perangkat akan diminta kode baru. |
+| `GEMINI_API_KEY` | API key dari Google AI Studio |
+| `FIREBASE_SERVICE_ACCOUNT` | Seluruh isi file JSON kunci akun layanan Firebase |
+| `GEMINI_MODEL` | (opsional) memaksa model tertentu |
+
+## Menjalankan di komputer sendiri
+
+```bash
+npm install
+npm run build
+KODE_AKSES=uji MOCK_AI=1 STATIC_DIR=dist npm run dev:api   # buka http://localhost:3001, kode: uji
+```
+
+Tanpa `FIREBASE_SERVICE_ACCOUNT`, data disimpan di `.data/kegiatan.json`. `MOCK_AI=1` mengganti AI dengan jawaban contoh. Untuk mengubah tampilan dengan reload otomatis, jalankan juga `npm run dev` (port 5173).
+
+Sebelum push, jalankan `npm run cek` untuk memeriksa tipe data.

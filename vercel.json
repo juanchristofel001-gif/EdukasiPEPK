@@ -1,0 +1,9 @@
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/ekstrak.ts": { "maxDuration": 60 },
+    "api/insight.ts": { "maxDuration": 60 }
+  }
+}
