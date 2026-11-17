@@ -34,6 +34,7 @@ Fungsi server Vercel (folder api/)
 | `shared/statistik.ts` | Perhitungan rekap (per wilayah, per bulan, dll.) dan teks "Salin status". |
 | `api/` | Fungsi server. `api/_lib/` berisi koneksi Gemini, database, dan pengecekan kode akses. |
 | `src/` | Tampilan website. `src/views/` satu file per halaman. |
+| `public/banten.json` | Batas 8 kabupaten/kota Banten untuk peta (Badan Informasi Geospasial, via repo GitHub ardian28/GeoJson-Indonesia-38-Provinsi, lisensi MIT; disederhanakan). |
 | `scripts/dev-api.ts` | Server lokal untuk menjalankan `api/` tanpa Vercel. |
 
 ## Model data: satu kegiatan

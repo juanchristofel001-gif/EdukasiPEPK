@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { periksa, type KegiatanInput } from '../../shared/schema.js';
 import { esc, $, toast } from '../ui.js';
 import { formHtml, bacaForm, tampilGalat } from './form.js';
+import { IKON } from '../ikon.js';
 import { segarkanData } from '../data.js';
 import { siapkan } from '../baca-file.js';
 
@@ -14,10 +15,11 @@ const TERIMA = '.pdf,.docx,.jpg,.jpeg,.png,.webp';
 
 export function viewUnggah(el: HTMLElement) {
   el.innerHTML = `
-  <header class="judul-hal"><h1>Unggah laporan</h1>
+  <header class="ph"><h1>Unggah laporan</h1>
     <p>AI membaca laporan dan mengisi data kegiatan. Kamu cukup mengecek, memperbaiki bila perlu, lalu menyimpan. File laporannya sendiri tidak disimpan.</p></header>
   <label class="drop" id="drop">
     <input type="file" id="file" accept="${TERIMA}" multiple>
+    <span class="drop-ikon">${IKON.unggah}</span>
     <strong>Pilih file laporan</strong>
     <span>atau tarik ke sini · PDF, Word (.docx), atau foto · foto dokumentasi di dalamnya tidak masalah</span>
   </label>
@@ -47,7 +49,7 @@ function gambar() {
   antrean = antrean.filter((x) => x.status !== 'tersimpan');
   box.innerHTML = antrean
     .map((x) => {
-      const head = `<div class="kartu-head"><div><span class="fnama">${esc(x.nama)}</span>${
+      const head = `<div class="kartu-head"><div class="fn">${IKON.file}<span class="fnama">${esc(x.nama)}</span>${
         x.status === 'baca' ? '<span class="pill">AI sedang membaca…</span>' : x.status === 'gagal' ? '<span class="pill merah">Gagal dibaca</span>' : '<span class="pill">Cek hasil AI</span>'
       }</div><button class="teks" data-buang="${x.id}">Buang</button></div>`;
       if (x.status === 'baca') return `<section class="kartu item" data-id="${x.id}">${head}<div class="memuat"><i></i><i></i><i></i></div></section>`;

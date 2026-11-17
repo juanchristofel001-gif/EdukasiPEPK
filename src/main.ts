@@ -4,30 +4,37 @@ import { api, kode, saatKodeDitolak } from './api.js';
 import { lupakanData } from './data.js';
 import { esc, $ } from './ui.js';
 import { viewDasbor } from './views/dasbor.js';
+import { IKON } from './ikon.js';
 import { viewUnggah } from './views/unggah.js';
 import { viewDaftar, viewDetail } from './views/daftar.js';
 
 const app = $('#app');
 
 const NAV = [
-  ['#/dasbor', 'Dasbor'],
-  ['#/unggah', 'Unggah laporan'],
-  ['#/kegiatan', 'Kegiatan'],
+  ['#/dasbor', 'Dasbor', IKON.dasbor],
+  ['#/unggah', 'Unggah laporan', IKON.unggah],
+  ['#/kegiatan', 'Kegiatan', IKON.daftar],
 ] as const;
+
+const merek = `<a class="merek" href="#/dasbor"><span class="logo">${IKON.topi}</span><span class="bn"><b>Edukasi <span>PEPK</span></b><small>OJK Provinsi Banten</small></span></a>`;
 
 function kerangka() {
   app.innerHTML = `
-  <header class="top">
-    <a class="merek" href="#/dasbor"><span class="logo" aria-hidden="true"></span><span><b>Edukasi PEPK</b><small>OJK Provinsi Banten</small></span></a>
-    <nav>${NAV.map(([h, t]) => `<a href="${h}">${t}</a>`).join('')}</nav>
-    <button class="teks" id="keluar">Keluar</button>
-  </header>
-  <main id="hal" tabindex="-1"></main>`;
-  $('#keluar').onclick = () => {
+  <aside class="side">
+    ${merek}
+    <nav class="nav">${NAV.map(([h, t, ic]) => `<a href="${h}">${ic}<span>${t}</span></a>`).join('')}</nav>
+    <button class="foot" id="keluar">${IKON.keluar}<span>Keluar</span></button>
+  </aside>
+  <header class="top">${merek}<button class="ikon-btn" id="keluar2" aria-label="Keluar">${IKON.keluar}</button></header>
+  <main id="hal" class="main" tabindex="-1"></main>
+  <nav class="bawah">${NAV.map(([h, t, ic]) => `<a href="${h}">${ic}<span>${t.replace(' laporan', '')}</span></a>`).join('')}</nav>`;
+  const keluar = () => {
     kode.hapus();
     lupakanData();
     masuk();
   };
+  $('#keluar').onclick = keluar;
+  $('#keluar2').onclick = keluar;
 }
 
 function rute() {
@@ -35,7 +42,7 @@ function rute() {
   if (!$('#hal')) kerangka();
   const h = location.hash || '#/dasbor';
   const hal = $('#hal');
-  document.querySelectorAll('nav a').forEach((a) => a.classList.toggle('aktif', h.startsWith(a.getAttribute('href')!)));
+  document.querySelectorAll('.nav a, .bawah a').forEach((a) => a.classList.toggle('aktif', h.startsWith(a.getAttribute('href')!)));
   const m = h.match(/^#\/kegiatan\/(.+)$/);
   if (m) viewDetail(hal, decodeURIComponent(m[1]));
   else if (h.startsWith('#/unggah')) viewUnggah(hal);
@@ -48,8 +55,8 @@ function masuk(pesan = '') {
   app.innerHTML = `
   <main class="masuk">
     <form id="fmasuk" class="kartu">
-      <span class="logo besar" aria-hidden="true"></span>
-      <h1>Edukasi PEPK</h1>
+      <span class="logo besar">${IKON.topi}</span>
+      <h1>Edukasi <span>PEPK</span></h1>
       <p>Pencatatan kegiatan edukasi keuangan OJK Provinsi Banten. Masukkan kode akses tim.</p>
       <label class="field"><span class="lbl">Kode akses</span><input id="kode" type="password" autocomplete="current-password" required autofocus></label>
       <p class="galat" role="alert"${pesan ? '' : ' hidden'}>${esc(pesan)}</p>

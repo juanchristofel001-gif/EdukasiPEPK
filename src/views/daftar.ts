@@ -5,6 +5,7 @@ import { api } from '../api.js';
 import { dataKegiatan, segarkanData } from '../data.js';
 import { esc, $, toast, unduh } from '../ui.js';
 import { formHtml, bacaForm, tampilGalat } from './form.js';
+import { IKON } from '../ikon.js';
 
 let cari = '';
 let wilayah = '';
@@ -19,8 +20,8 @@ export async function viewDaftar(el: HTMLElement) {
     return;
   }
   el.innerHTML = `
-  <header class="judul-hal dasbor-head"><div><h1>Kegiatan</h1><p>${semua.length} kegiatan tercatat</p></div>
-    <div class="kontrol"><button class="btn" id="csv"${semua.length ? '' : ' disabled'}>Unduh CSV</button><a class="btn utama" href="#/unggah">Unggah laporan</a></div></header>
+  <header class="ph"><div><h1>Kegiatan</h1><p>${semua.length} kegiatan tercatat</p></div>
+    <div class="kontrol"><button class="btn" id="csv"${semua.length ? '' : ' disabled'}>${IKON.unduh}Unduh CSV</button><a class="btn utama" href="#/unggah">${IKON.unggah}Unggah laporan</a></div></header>
   <div class="saring">
     <input type="search" id="cari" placeholder="Cari judul, tempat, mitra, narasumber…" value="${esc(cari)}">
     <select id="wil"><option value="">Semua wilayah</option>${SEMUA_WILAYAH.map((w) => `<option${w === wilayah ? ' selected' : ''}>${w}</option>`).join('')}</select>
@@ -103,7 +104,7 @@ export async function viewDetail(el: HTMLElement, id: string) {
     return;
   }
   el.innerHTML = `<a class="teks kembali" href="#/kegiatan">← Semua kegiatan</a>
-  <header class="judul-hal"><h1>${esc(k.judul)}</h1><p>Dicatat ${new Date(k.dibuat).toLocaleDateString('id-ID', { dateStyle: 'long' })}${
+  <header class="ph"><h1>${esc(k.judul)}</h1><p>Dicatat ${new Date(k.dibuat).toLocaleDateString('id-ID', { dateStyle: 'long' })}${
     k.dicatatOleh ? ' oleh ' + esc(k.dicatatOleh) : ''
   }${k.diubah !== k.dibuat ? ' · diubah ' + new Date(k.diubah).toLocaleDateString('id-ID', { dateStyle: 'long' }) : ''}</p></header>
   <section class="kartu">${formHtml(k)}<div class="aksi"><button class="btn bahaya" id="hapus">Hapus</button><button class="btn utama" id="simpan">Simpan perubahan</button></div></section>`;
