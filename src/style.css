@@ -194,8 +194,13 @@ input.ro { color: var(--mute); }
 .tv { font-size: 12px; font-weight: 700; margin-bottom: 4px; font-variant-numeric: tabular-nums; }
 .tl { font-size: 11px; color: var(--mute); margin-top: 6px; font-weight: 500; }
 .hb { list-style: none; margin: 0; padding: 0; }
-.hb li { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) 30px; gap: 12px; align-items: center; padding: 6px 0; font-size: 13px; font-weight: 500; }
-.hn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hb li { display: grid; grid-template-columns: 30px minmax(0, 1.4fr) minmax(48px, 1fr) 26px; gap: 10px; align-items: center; padding: 7px 0; font-size: 13px; font-weight: 600; }
+.hi { width: 30px; height: 30px; border-radius: 9px; background: var(--birut); color: var(--biru); display: grid; place-items: center; }
+.hi svg { width: 17px; height: 17px; }
+#kecTop .hi { background: var(--field); }
+#kecTop .hi svg { width: 24px; height: 24px; }
+.hn { display: flex; flex-direction: column; min-width: 0; line-height: 1.3; }
+.hn small { font-size: 11.5px; color: var(--mute); font-weight: 500; }
 .hb b { text-align: right; font-variant-numeric: tabular-nums; }
 
 /* ---------- insight ---------- */

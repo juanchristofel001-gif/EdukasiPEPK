@@ -222,7 +222,8 @@ export function tooltipHtml(nama: string, s: Statistik) {
 // Ikon kecil bentuk satu wilayah (siluet), diwarnai sesuai kelas nilainya.
 // Wilayah yang tidak ada di data peta mendapat ikon penanda biasa.
 export function ikonWilayah(g: Geo, nama: string, ki: number, warna?: { isi: string; garis: string }) {
-  const w = g.wilayah.find((x) => x.nama === nama);
+  // nama 'Kab|Kecamatan' → bentuk kecamatan; selain itu bentuk kab/kota
+  const w = nama.includes('|') ? g.kecamatan.find((x) => x.kab + '|' + x.nama === nama) : g.wilayah.find((x) => x.nama === nama);
   const isi = warna ? warna.isi : ki < 0 ? KOSONG : SKALA[ki];
   if (!w) return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-5.6-6-10a6 6 0 1 1 12 0c0 4.4-6 10-6 10z" fill="${isi}" stroke="${warna ? warna.garis : '#8a8590'}"/></svg>`;
   const pts = w.poligon.flatMap((p) => p[0]);

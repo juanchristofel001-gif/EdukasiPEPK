@@ -6,7 +6,7 @@ import { dataKegiatan } from '../data.js';
 import { esc, $, $$, hariIni, selisihHari, salin, toast } from '../ui.js';
 import { muatPeta, petaSvg, tooltipHtml, batasLegenda, kelas, ikonWilayah, SKALA, KOSONG, type Ukuran, type Tingkat } from './peta.js';
 import { JUMLAH_KECAMATAN } from '../../shared/kecamatan.js';
-import { IKON } from '../ikon.js';
+import { IKON, ikonPilihan } from '../ikon.js';
 
 let pilihan = 'tahun';
 let ukuran: Ukuran = 'kegiatan';
@@ -113,15 +113,16 @@ function isi(s: Statistik, semua: Kegiatan[], p: Periode, h: string) {
     </section>
     <section class="kartu sp7"><div class="ch"><div><h2>Tren bulanan</h2><p class="sub">Jumlah kegiatan per bulan</p></div></div>${trenHtml(s)}</section>
     <section class="kartu sp5" id="insight"><div class="ch"><div><h2>Insight AI</h2><p class="sub">Tafsiran dari angka di halaman ini</p></div></div><div class="ins-isi"><div class="memuat"><i></i><i></i><i></i></div></div></section>
-    <section class="kartu sp4"><div class="ch"><div><h2>Kecamatan teratas</h2><p class="sub">${s.kecamatanTerjangkau} dari ${JUMLAH_KECAMATAN} kecamatan sudah dijangkau</p></div></div>${batang(
+    <section class="kartu sp4" id="kecTop"><div class="ch"><div><h2>Kecamatan teratas</h2><p class="sub">${s.kecamatanTerjangkau} dari ${JUMLAH_KECAMATAN} kecamatan sudah dijangkau</p></div></div>${batang(
       s.perKecamatan
         .filter((c) => c.kegiatan)
         .sort((a, b) => b.kegiatan - a.kegiatan || b.peserta - a.peserta)
-        .map((c): [string, number] => [`${c.nama} · ${c.kab.replace('Kabupaten ', 'Kab. ')}`, c.kegiatan]),
+        .map((c): [string, number] => [`${c.kab}|${c.nama}`, c.kegiatan]),
       10,
+      { label: (k) => k.split('|')[1], sub: (k) => k.split('|')[0].replace('Kabupaten ', 'Kab. '), ikon: () => '' },
     )}</section>
-    <section class="kartu sp4"><div class="ch"><div><h2>Sasaran peserta</h2><p class="sub">Jumlah kegiatan per sasaran</p></div></div>${batang(s.sasaran)}</section>
-    <section class="kartu sp4"><div class="ch"><div><h2>Topik materi</h2><p class="sub">Jumlah kegiatan yang membawakan topik ini</p></div></div>${batang(s.topik, 8)}</section>
+    <section class="kartu sp4"><div class="ch"><div><h2>Sasaran peserta</h2><p class="sub">Jumlah kegiatan per sasaran</p></div></div>${batang(s.sasaran, 13, { ikon: ikonPilihan })}</section>
+    <section class="kartu sp4"><div class="ch"><div><h2>Topik materi</h2><p class="sub">Jumlah kegiatan yang membawakan topik ini</p></div></div>${batang(s.topik, 8, { ikon: ikonPilihan })}</section>
     <section class="kartu sp12"><div class="ch"><div><h2>Kegiatan terbaru</h2><p class="sub">Lima kegiatan terakhir di periode ini</p></div><a class="lnk" href="#/kegiatan">Lihat semua</a></div>${terbaru(semua, p)}</section>
   </div>`;
 }
@@ -152,12 +153,18 @@ function trenHtml(s: Statistik) {
     .join('')}</div>`;
 }
 
-function batang(data: [string, number][], n = 13) {
+// Daftar batang horizontal; tiap baris punya ikon dan label yang boleh dua baris (tidak terpotong).
+function batang(data: [string, number][], n = 13, opt: { ikon?: (k: string) => string; sub?: (k: string) => string; label?: (k: string) => string } = {}) {
   if (!data.length) return '<p class="kosong-kecil">Belum ada data.</p>';
   const mx = data[0][1];
   return `<ul class="hb">${data
     .slice(0, n)
-    .map(([k, v]) => `<li><span class="hn" title="${esc(k)}">${esc(k)}</span><span class="bar"><i style="width:${(v / mx) * 100}%"></i></span><b>${v}</b></li>`)
+    .map(
+      ([k, v]) =>
+        `<li data-k="${esc(k)}"><span class="hi">${opt.ikon ? opt.ikon(k) : ''}</span><span class="hn"><span>${esc(opt.label ? opt.label(k) : k)}</span>${
+          opt.sub ? `<small>${esc(opt.sub(k))}</small>` : ''
+        }</span><span class="bar"><i style="width:${(v / mx) * 100}%"></i></span><b>${v}</b></li>`,
+    )
     .join('')}</ul>`;
 }
 
@@ -187,6 +194,11 @@ async function pasangPeta(el: HTMLElement, s: Statistik) {
     return;
   }
   const maksKab = Math.max(0, ...s.perWilayah.map((w) => w.kegiatan));
+  const maksKec = Math.max(0, ...s.perKecamatan.map((c) => c.kegiatan));
+  $$('#kecTop .hb li', el).forEach((li) => {
+    const c = s.perKecamatan.find((x) => x.kab + '|' + x.nama === li.dataset.k);
+    $('.hi', li).innerHTML = ikonWilayah(wil, li.dataset.k!, kelas(c?.kegiatan || 0, maksKec));
+  });
   $$('[data-ikon-putih]', el).forEach((i) => (i.innerHTML = ikonWilayah(wil, i.dataset.ikonPutih!, -1, { isi: 'rgba(255,255,255,.9)', garis: 'rgba(255,255,255,.9)' })));
   $$('.wl-ikon', el).forEach((i) => {
     const w = s.perWilayah.find((x) => x.nama === i.dataset.ikon);
