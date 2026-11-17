@@ -1,5 +1,6 @@
 // Model data kegiatan edukasi. Dipakai bersama oleh website (src/) dan server (api/),
 // jadi daftar pilihan dan aturan validasinya selalu sama di kedua sisi.
+import { KECAMATAN } from './kecamatan.js';
 
 export const KABKOTA = [
   'Kota Serang',
@@ -66,6 +67,8 @@ export type Kegiatan = {
   tempat: string;
   kabkota: (typeof SEMUA_WILAYAH)[number] | '';
   kabkotaDitebak: boolean; // true kalau wilayah tidak tertulis di laporan dan ditebak AI dari nama tempat
+  kecamatan: string; // salah satu kecamatan di kabkota (lihat shared/kecamatan.ts); kosong untuk daring/luar Banten
+  kecamatanDitebak: boolean;
   mode: (typeof MODE)[number] | '';
   narasumber: string[];
   sasaran: (typeof SASARAN)[number][];
@@ -105,6 +108,14 @@ export function isTanggal(s: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s + 'T00:00:00Z'));
 }
 
+const huruf = (v: unknown) => str(v).toLowerCase().replace(/^kec(amatan|\.)?\s+/, '').replace(/[^a-z]/g, '');
+// Nama kecamatan dicocokkan tanpa memedulikan spasi/huruf besar ("Batu Ceper" = "Batuceper").
+export function cocokKecamatan(kab: string, v: unknown) {
+  const h = huruf(v);
+  return (h && (KECAMATAN[kab] || []).find((k) => huruf(k) === h)) || '';
+}
+export const perluKecamatan = (kab: string) => !!KECAMATAN[kab];
+
 // Merapikan data dari mana pun (form, AI, impor): buang nilai di luar daftar pilihan,
 // potong teks terlalu panjang, pastikan tipe benar.
 export function rapikan(raw: Record<string, unknown>): KegiatanInput {
@@ -119,6 +130,8 @@ export function rapikan(raw: Record<string, unknown>): KegiatanInput {
     tempat: str(raw.tempat, 200),
     kabkota: pick(SEMUA_WILAYAH, raw.kabkota),
     kabkotaDitebak: raw.kabkotaDitebak === true,
+    kecamatan: cocokKecamatan(pick(SEMUA_WILAYAH, raw.kabkota), raw.kecamatan),
+    kecamatanDitebak: raw.kecamatanDitebak === true,
     mode: pick(MODE, raw.mode),
     narasumber: names(raw.narasumber),
     sasaran: picks(SASARAN, raw.sasaran),
@@ -141,6 +154,7 @@ export function periksa(k: KegiatanInput): string[] {
   if (!k.judul) e.push('Judul kegiatan belum diisi.');
   if (!k.tanggal) e.push('Tanggal belum diisi.');
   if (!k.kabkota) e.push('Kabupaten/kota belum dipilih.');
+  else if (perluKecamatan(k.kabkota) && !k.kecamatan) e.push('Kecamatan belum dipilih.');
   if (k.peserta === null) e.push('Jumlah peserta belum diisi.');
   if (!k.sasaran.length) e.push('Pilih minimal satu sasaran peserta.');
   return e;

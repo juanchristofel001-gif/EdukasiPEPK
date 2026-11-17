@@ -6,15 +6,18 @@ import { esc } from '../ui.js';
 
 type Titik = [number, number];
 type Wilayah = { nama: string; poligon: Titik[][][] };
+type Kec = Wilayah & { kab: string };
+export type Geo = { wilayah: Wilayah[]; kecamatan: Kec[] };
+export type Tingkat = 'kabkota' | 'kecamatan';
 
-let geo: Promise<Wilayah[]> | null = null;
+let geo: Promise<Geo> | null = null;
 export const muatPeta = () =>
   (geo ??= fetch('/banten.json')
     .then((r) => {
       if (!r.ok) throw new Error('Peta tidak bisa dimuat.');
       return r.json();
     })
-    .then((j) => j.wilayah as Wilayah[]));
+    .then((j) => j as Geo));
 
 // Warna berurutan satu rona (biru), terang = sedikit, gelap = banyak.
 export const SKALA = ['#dbe7f7', '#a9c6ec', '#6e9fdb', '#3a72bd', '#1b4a8a'];
@@ -105,7 +108,8 @@ function titikLabel(ring: Titik[], k: number): Titik {
   return best;
 }
 
-export function petaSvg(wilayah: Wilayah[], s: Statistik, ukuran: Ukuran, sempit = false) {
+export function petaSvg(g: Geo, s: Statistik, ukuran: Ukuran, sempit = false, tingkat: Tingkat = 'kabkota') {
+  const wilayah = g.wilayah;
   const W = 620,
     PAD = sempit ? { l: 4, r: 170, t: 100, b: 8 } : { l: 8, r: 118, t: 58, b: 8 };
   const semua = wilayah.flatMap((w) => w.poligon.flatMap((p) => p[0]));
@@ -124,6 +128,37 @@ export function petaSvg(wilayah: Wilayah[], s: Statistik, ukuran: Ukuran, sempit
   const data = new Map(s.perWilayah.map((w) => [w.nama, w]));
   const nilai = (n: string) => (ukuran === 'kegiatan' ? data.get(n)?.kegiatan : data.get(n)?.peserta) || 0;
   const maks = Math.max(0, ...s.perWilayah.map((w) => (ukuran === 'kegiatan' ? w.kegiatan : w.peserta)));
+
+  const path = (pol: Titik[][][]) => pol.map((pl) => pl.map((ring) => 'M' + ring.map((p) => `${X(p).toFixed(1)},${Y(p).toFixed(1)}`).join('L') + 'Z').join('')).join('');
+  const kecData = new Map(s.perKecamatan.map((c) => [c.kab + '|' + c.nama, c]));
+  if (tingkat === 'kecamatan') {
+    const nk = (c: Kec) => {
+      const d = kecData.get(c.kab + '|' + c.nama);
+      return (ukuran === 'kegiatan' ? d?.kegiatan : d?.peserta) || 0;
+    };
+    const mk = Math.max(0, ...g.kecamatan.map(nk));
+    const isi = g.kecamatan
+      .map((c) => {
+        const v = nk(c),
+          ki = kelas(v, mk);
+        return `<path class="wil kec" data-nama="${esc(c.kab + '|' + c.nama)}" d="${path(c.poligon)}" fill="${ki < 0 ? KOSONG : SKALA[ki]}" tabindex="-1"/>`;
+      })
+      .join('');
+    const garis = wilayah.map((w) => `<path class="batas-kab" d="${path(w.poligon)}"/>`).join('');
+    const nama = wilayah
+      .map((w) => {
+        const utama = w.poligon.map((pl) => ({ ring: pl[0], luas: luasDanPusat(pl[0]).luas })).sort((a, b) => b.luas - a.luas)[0].ring;
+        const t = titikLabel(utama, k);
+        const cx = X(t), cy = Y(t);
+        const luar = LABEL_LUAR[w.nama];
+        if (!luar) return `<g class="pl tipis" pointer-events="none"><text x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" class="ln">${SINGKAT[w.nama]}</text></g>`;
+        const f = sempit ? 1.45 : 1;
+        const lx = cx + luar[0] * f, ly = cy + luar[1] * f;
+        return `<g class="pl luar" pointer-events="none"><path d="M${cx.toFixed(1)},${cy.toFixed(1)}L${lx.toFixed(1)},${(ly + 4).toFixed(1)}"/><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="2.2"/><text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${luar[2]}" class="ln">${SINGKAT[w.nama]}</text></g>`;
+      })
+      .join('');
+    return { svg: `<svg viewBox="0 0 ${W} ${H}" class="peta-svg" role="img" aria-label="Peta sebaran ${ukuran} per kecamatan di Banten">${isi}${garis}${nama}</svg>`, maks: mk };
+  }
 
   const bentuk = wilayah
     .map((w) => {
@@ -159,13 +194,20 @@ export function petaSvg(wilayah: Wilayah[], s: Statistik, ukuran: Ukuran, sempit
     })
     .join('');
 
-  return `<svg viewBox="0 0 ${W} ${H}" class="peta-svg" role="group" aria-label="Peta sebaran ${ukuran} per kabupaten/kota di Banten">${bentuk}${label}</svg>`;
+  return { svg: `<svg viewBox="0 0 ${W} ${H}" class="peta-svg" role="group" aria-label="Peta sebaran ${ukuran} per kabupaten/kota di Banten">${bentuk}${label}</svg>`, maks };
 }
 
 export function tooltipHtml(nama: string, s: Statistik) {
+  if (nama.includes('|')) {
+    const [kab, kec] = nama.split('|');
+    const c = s.perKecamatan.find((x) => x.kab === kab && x.nama === kec);
+    return `<b>Kec. ${esc(kec)}</b><span>${esc(kab)}</span><span>${c?.kegiatan || 0} kegiatan · ${angka(c?.peserta || 0)} peserta</span>${
+      c?.terakhir ? `<span>Terakhir ${tanggalPendek(c.terakhir)}</span>` : ''
+    }`;
+  }
   const w = s.perWilayah.find((x) => x.nama === nama);
   if (!w) return `<b>${esc(nama)}</b>`;
-  return `<b>${esc(nama)}</b><span>${w.kegiatan} kegiatan · ${angka(w.peserta)} peserta</span><span>${
+  return `<b>${esc(nama)}</b><span>${w.kegiatan} kegiatan · ${angka(w.peserta)} peserta</span><span>${w.kecTerjangkau} dari ${w.kecTotal} kecamatan terjangkau</span><span>${
     w.terakhir ? 'Terakhir ' + tanggalPendek(w.terakhir) : 'Belum ada kegiatan'
   }</span>`;
 }

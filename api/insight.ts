@@ -37,7 +37,7 @@ export default async function handler(req: Req, res: Res) {
       .map((k) => `- ${k.tanggal} ${k.kabkota}, ${k.sasaran.join('/')}: ${k.catatan}`)
       .join('\n');
     const prompt = `Kamu analis program edukasi keuangan OJK Provinsi Banten. Berikut rekap kegiatan edukasi periode ${dari} s.d. ${sampai} (JSON):
-${JSON.stringify({ ...st, perBulan: st.perBulan.filter((b) => b.kegiatan) })}
+${JSON.stringify({ ...st, perBulan: st.perBulan.filter((b) => b.kegiatan), perKecamatan: st.perKecamatan.filter((c) => c.kegiatan), kecamatanTanpaKegiatanPerKab: Object.fromEntries(st.perWilayah.map((w) => [w.nama, w.kecTotal - w.kecTerjangkau])) })}
 
 Catatan lapangan:
 ${catatan || '(tidak ada)'}

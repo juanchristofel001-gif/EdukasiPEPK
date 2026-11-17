@@ -2,7 +2,7 @@
 import { api } from '../api.js';
 import { periksa, type KegiatanInput } from '../../shared/schema.js';
 import { esc, $, toast } from '../ui.js';
-import { formHtml, bacaForm, tampilGalat } from './form.js';
+import { formHtml, bacaForm, tampilGalat, pasangForm } from './form.js';
 import { IKON } from '../ikon.js';
 import { segarkanData } from '../data.js';
 import { siapkan } from '../baca-file.js';
@@ -58,6 +58,7 @@ function gambar() {
       return `<section class="kartu item" data-id="${x.id}">${head}${formHtml(x.isian!, { tandaiAi: true })}<div class="aksi"><button class="btn utama" data-simpan="${x.id}">Simpan kegiatan</button></div></section>`;
     })
     .join('');
+  box.querySelectorAll<HTMLFormElement>('form').forEach(pasangForm);
   box.onclick = async (e) => {
     const t = e.target as HTMLElement;
     const buang = t.closest<HTMLElement>('[data-buang]')?.dataset.buang;
@@ -79,7 +80,7 @@ function gambar() {
 
 function kosong(nama: string): KegiatanInput {
   return {
-    judul: '', tema: '', pengundang: '', peranOjk: '', tanggal: '', tempat: '', kabkota: '', kabkotaDitebak: false, mode: '', narasumber: [],
+    judul: '', tema: '', pengundang: '', peranOjk: '', tanggal: '', tempat: '', kabkota: '', kabkotaDitebak: false, kecamatan: '', kecamatanDitebak: false, mode: '', narasumber: [],
     sasaran: [], sasaranDetail: '', peserta: null, pesertaPerkiraan: false, topik: [], kanal: [], metode: [], ringkasan: '', catatan: '', sumberFile: nama, dicatatOleh: '',
   };
 }

@@ -1,6 +1,7 @@
 // Perhitungan ringkasan dari daftar kegiatan. Dipakai dasbor (browser) dan insight AI (server),
 // supaya angka yang dilihat tim sama persis dengan angka yang dibaca AI.
 import { KABKOTA, type Kegiatan } from './schema.js';
+import { KECAMATAN, JUMLAH_KECAMATAN } from './kecamatan.js';
 
 export type Periode = { dari: string; sampai: string }; // YYYY-MM-DD, inklusif
 
@@ -10,7 +11,9 @@ export type Statistik = {
   peserta: number;
   adaPerkiraan: boolean;
   wilayahTerjangkau: number;
-  perWilayah: { nama: string; kegiatan: number; peserta: number; terakhir: string | null }[];
+  perWilayah: { nama: string; kegiatan: number; peserta: number; terakhir: string | null; kecTerjangkau: number; kecTotal: number }[];
+  kecamatanTerjangkau: number;
+  perKecamatan: { kab: string; nama: string; kegiatan: number; peserta: number; terakhir: string | null }[];
   perBulan: { bulan: string; kegiatan: number; peserta: number }[]; // bulan = YYYY-MM
   sasaran: [string, number][];
   topik: [string, number][];
@@ -49,15 +52,18 @@ function bulanAntara(dari: string, sampai: string) {
 
 export function statistik(semua: Kegiatan[], p: Periode): Statistik {
   const list = dalamPeriode(semua, p);
-  const perWilayah = KABKOTA.map((nama) => {
-    const ks = list.filter((k) => k.kabkota === nama);
-    return {
-      nama,
-      kegiatan: ks.length,
-      peserta: ks.reduce((s, k) => s + (k.peserta || 0), 0),
-      terakhir: ks.reduce<string | null>((t, k) => (!t || k.tanggal > t ? k.tanggal : t), null),
-    };
+  const ringkas = (ks: Kegiatan[]) => ({
+    kegiatan: ks.length,
+    peserta: ks.reduce((s, k) => s + (k.peserta || 0), 0),
+    terakhir: ks.reduce<string | null>((t, k) => (!t || k.tanggal > t ? k.tanggal : t), null),
   });
+  const perKecamatan = KABKOTA.flatMap((kab) => (KECAMATAN[kab] || []).map((nama) => ({ kab, nama, ...ringkas(list.filter((k) => k.kabkota === kab && k.kecamatan === nama)) })));
+  const perWilayah = KABKOTA.map((nama) => ({
+    nama,
+    ...ringkas(list.filter((k) => k.kabkota === nama)),
+    kecTerjangkau: perKecamatan.filter((c) => c.kab === nama && c.kegiatan).length,
+    kecTotal: (KECAMATAN[nama] || []).length,
+  }));
   const perBulan = bulanAntara(p.dari, p.sampai).map((b) => {
     const ks = list.filter((k) => k.tanggal.startsWith(b));
     return { bulan: b, kegiatan: ks.length, peserta: ks.reduce((s, k) => s + (k.peserta || 0), 0) };
@@ -69,6 +75,8 @@ export function statistik(semua: Kegiatan[], p: Periode): Statistik {
     adaPerkiraan: list.some((k) => k.pesertaPerkiraan),
     wilayahTerjangkau: perWilayah.filter((w) => w.kegiatan > 0).length,
     perWilayah,
+    kecamatanTerjangkau: perKecamatan.filter((c) => c.kegiatan).length,
+    perKecamatan,
     perBulan,
     sasaran: hitung(list, (k) => k.sasaran),
     topik: hitung(list, (k) => k.topik),
@@ -96,6 +104,7 @@ export function teksStatus(s: Statistik, hariIni: string) {
     `• Peserta: ${s.adaPerkiraan ? '±' : ''}${angka(s.peserta)} orang`,
     `• Wilayah terjangkau: ${s.wilayahTerjangkau} dari ${KABKOTA.length} kabupaten/kota`,
   ];
+  baris.push(`• Kecamatan terjangkau: ${s.kecamatanTerjangkau} dari ${JUMLAH_KECAMATAN} kecamatan`);
   if (atas.length) baris.push(`• Terbanyak: ${atas.map((w) => `${w.nama} (${w.kegiatan})`).join(', ')}`);
   if (belum.length) baris.push(`• Belum ada kegiatan: ${belum.join(', ')}`);
   if (s.sasaran.length) baris.push(`• Sasaran utama: ${s.sasaran.slice(0, 3).map(([n, c]) => `${n} (${c})`).join(', ')}`);

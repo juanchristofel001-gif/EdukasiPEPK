@@ -4,11 +4,13 @@ import { statistik, teksStatus, namaBulan, tanggalPanjang, tanggalPendek, angka,
 import { api } from '../api.js';
 import { dataKegiatan } from '../data.js';
 import { esc, $, $$, hariIni, selisihHari, salin, toast } from '../ui.js';
-import { muatPeta, petaSvg, tooltipHtml, batasLegenda, SKALA, KOSONG, type Ukuran } from './peta.js';
+import { muatPeta, petaSvg, tooltipHtml, batasLegenda, kelas, SKALA, KOSONG, type Ukuran, type Tingkat } from './peta.js';
+import { JUMLAH_KECAMATAN } from '../../shared/kecamatan.js';
 import { IKON } from '../ikon.js';
 
 let pilihan = 'tahun';
 let ukuran: Ukuran = 'kegiatan';
+let tingkat: Tingkat = 'kecamatan';
 
 function periodeDari(p: string, semua: Kegiatan[]): Periode {
   const h = hariIni();
@@ -85,15 +87,18 @@ function isi(s: Statistik, semua: Kegiatan[], p: Periode, h: string) {
     </div>
     <div class="hero-stat">
       <div><span>Peserta</span><b>${s.adaPerkiraan ? '<small>±</small>' : ''}${angka(s.peserta)}</b></div>
-      <div><span>Wilayah terjangkau</span><b>${s.wilayahTerjangkau}<small>/${KABKOTA.length}</small></b></div>
-      <div><span>Rata-rata peserta</span><b>${s.kegiatan ? angka(Math.round(s.peserta / s.kegiatan)) : 0}</b></div>
+      <div><span>Kab/kota terjangkau</span><b>${s.wilayahTerjangkau}<small>/${KABKOTA.length}</small></b></div>
+      <div><span>Kecamatan terjangkau</span><b>${s.kecamatanTerjangkau}<small>/${JUMLAH_KECAMATAN}</small></b></div>
       <div><span>Belum dijangkau</span><b class="kecil">${belum.length ? belum.map((w) => esc(w.nama.replace('Kabupaten ', 'Kab. '))).join(', ') : 'Semua terjangkau'}</b></div>
     </div>
   </section>
   <div class="dash">
     <section class="kartu sp8 peta-kartu">
       <div class="ch"><div><h2>Peta sebaran</h2><p class="sub">Makin gelap, makin banyak ${ukuran}</p></div>
-        <div class="seg kecil" role="group" aria-label="Ukuran peta"><button data-u="kegiatan" class="${ukuran === 'kegiatan' ? 'on' : ''}">Kegiatan</button><button data-u="peserta" class="${ukuran === 'peserta' ? 'on' : ''}">Peserta</button></div></div>
+        <div class="peta-kontrol">
+          <div class="seg kecil" role="group" aria-label="Tingkat wilayah"><button data-t="kecamatan" class="${tingkat === 'kecamatan' ? 'on' : ''}">Kecamatan</button><button data-t="kabkota" class="${tingkat === 'kabkota' ? 'on' : ''}">Kab/kota</button></div>
+          <div class="seg kecil" role="group" aria-label="Ukuran peta"><button data-u="kegiatan" class="${ukuran === 'kegiatan' ? 'on' : ''}">Kegiatan</button><button data-u="peserta" class="${ukuran === 'peserta' ? 'on' : ''}">Peserta</button></div>
+        </div></div>
       <div class="peta" id="peta"><div class="memuat besar"><i></i><i></i><i></i></div></div>
       <div class="legenda" id="legenda"></div>
       <div class="tip" id="tip" hidden></div>
@@ -104,8 +109,15 @@ function isi(s: Statistik, semua: Kegiatan[], p: Periode, h: string) {
     </section>
     <section class="kartu sp7"><div class="ch"><div><h2>Tren bulanan</h2><p class="sub">Jumlah kegiatan per bulan</p></div></div>${trenHtml(s)}</section>
     <section class="kartu sp5" id="insight"><div class="ch"><div><h2>Insight AI</h2><p class="sub">Tafsiran dari angka di halaman ini</p></div></div><div class="ins-isi"><div class="memuat"><i></i><i></i><i></i></div></div></section>
-    <section class="kartu sp6"><div class="ch"><div><h2>Sasaran peserta</h2><p class="sub">Jumlah kegiatan per sasaran</p></div></div>${batang(s.sasaran)}</section>
-    <section class="kartu sp6"><div class="ch"><div><h2>Topik materi</h2><p class="sub">Jumlah kegiatan yang membawakan topik ini</p></div></div>${batang(s.topik, 8)}</section>
+    <section class="kartu sp4"><div class="ch"><div><h2>Kecamatan teratas</h2><p class="sub">${s.kecamatanTerjangkau} dari ${JUMLAH_KECAMATAN} kecamatan sudah dijangkau</p></div></div>${batang(
+      s.perKecamatan
+        .filter((c) => c.kegiatan)
+        .sort((a, b) => b.kegiatan - a.kegiatan || b.peserta - a.peserta)
+        .map((c): [string, number] => [`${c.nama} · ${c.kab.replace('Kabupaten ', 'Kab. ')}`, c.kegiatan]),
+      10,
+    )}</section>
+    <section class="kartu sp4"><div class="ch"><div><h2>Sasaran peserta</h2><p class="sub">Jumlah kegiatan per sasaran</p></div></div>${batang(s.sasaran)}</section>
+    <section class="kartu sp4"><div class="ch"><div><h2>Topik materi</h2><p class="sub">Jumlah kegiatan yang membawakan topik ini</p></div></div>${batang(s.topik, 8)}</section>
     <section class="kartu sp12"><div class="ch"><div><h2>Kegiatan terbaru</h2><p class="sub">Lima kegiatan terakhir di periode ini</p></div><a class="lnk" href="#/kegiatan">Lihat semua</a></div>${terbaru(semua, p)}</section>
   </div>`;
 }
@@ -118,7 +130,7 @@ function wilayahHtml(s: Statistik, h: string) {
       const ket = !w.kegiatan
         ? '<span class="tag merah">Belum ada kegiatan</span>'
         : `<span class="kapan${lama! > 90 ? ' lama' : ''}">${tanggalPendek(w.terakhir!)}${lama! > 0 ? ` · ${lama} hari lalu` : ''}</span>`;
-      return `<li class="${w.kegiatan ? '' : 'nol'}" data-nama="${esc(w.nama)}"><div class="wl-k"><span class="wn">${w.nama.replace('Kabupaten ', 'Kab. ')}</span>${ket}</div><div class="wl-n"><b>${w.kegiatan}</b><span>${angka(w.peserta)} peserta</span></div></li>`;
+      return `<li class="${w.kegiatan ? '' : 'nol'}" data-nama="${esc(w.nama)}"><div class="wl-k"><span class="wn">${w.nama.replace('Kabupaten ', 'Kab. ')}</span>${ket}</div><div class="wl-n"><b>${w.kegiatan}</b><span>${angka(w.peserta)} peserta · ${w.kecTerjangkau}/${w.kecTotal} kec</span></div></li>`;
     })
     .join('')}</ol>`;
 }
@@ -172,16 +184,24 @@ async function pasangPeta(el: HTMLElement, s: Statistik) {
   }
   const gambar = () => {
     if (!box.isConnected) return;
-    box.innerHTML = petaSvg(wil, s, ukuran, box.clientWidth < 520);
-    const maks = Math.max(0, ...s.perWilayah.map((w) => (ukuran === 'kegiatan' ? w.kegiatan : w.peserta)));
-    const bl = batasLegenda(maks);
+    const r = petaSvg(wil, s, ukuran, box.clientWidth < 520, tingkat);
+    box.innerHTML = r.svg;
+    const bl = batasLegenda(r.maks);
     leg.innerHTML =
       `<span class="lg"><i style="background:${KOSONG}"></i>0</span>` +
-      bl.map((t, i) => `<span class="lg"><i style="background:${SKALA[bl.length === SKALA.length ? i : Math.round((i / Math.max(1, bl.length - 1)) * (SKALA.length - 1))]}"></i>${t}</span>`).join('') +
-      `<span class="lg-unit">${ukuran}</span>`;
+      bl.map((t, i) => `<span class="lg"><i style="background:${SKALA[r.maks <= SKALA.length ? kelas(i + 1, r.maks) : i]}"></i>${t}</span>`).join('') +
+      `<span class="lg-unit">${ukuran} per ${tingkat === 'kecamatan' ? 'kecamatan' : 'kab/kota'}</span>`;
     $('.sub', kartu).textContent = `Makin gelap, makin banyak ${ukuran}`;
   };
   gambar();
+  $$<HTMLButtonElement>('[data-t]', kartu).forEach(
+    (b) =>
+      (b.onclick = () => {
+        tingkat = b.dataset.t as Tingkat;
+        $$('[data-t]', kartu).forEach((x) => x.classList.toggle('on', x === b));
+        gambar();
+      }),
+  );
   $$<HTMLButtonElement>('[data-u]', kartu).forEach(
     (b) =>
       (b.onclick = () => {
@@ -192,7 +212,8 @@ async function pasangPeta(el: HTMLElement, s: Statistik) {
   );
   const sorot = (nama: string | null) => {
     $$('.wil', box).forEach((p) => p.classList.toggle('aktif', p.dataset.nama === nama));
-    $$('.wl li', el).forEach((li) => li.classList.toggle('aktif', li.dataset.nama === nama));
+    const kab = nama?.split('|')[0] ?? null;
+    $$('.wl li', el).forEach((li) => li.classList.toggle('aktif', li.dataset.nama === kab));
   };
   const tampil = (nama: string, x: number, y: number) => {
     const r = kartu.getBoundingClientRect();
@@ -221,7 +242,11 @@ async function pasangPeta(el: HTMLElement, s: Statistik) {
   });
   box.addEventListener('focusout', sembunyi);
   $$('.wl li', el).forEach((li) => {
-    li.addEventListener('pointerenter', () => sorot(li.dataset.nama!));
+    li.addEventListener('pointerenter', () => {
+      const n = li.dataset.nama!;
+      $$('.wil', box).forEach((p) => p.classList.toggle('aktif', p.dataset.nama === n || p.dataset.nama!.startsWith(n + '|')));
+      li.classList.add('aktif');
+    });
     li.addEventListener('pointerleave', () => sorot(null));
   });
 }

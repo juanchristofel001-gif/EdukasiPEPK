@@ -4,7 +4,7 @@ import { tanggalPanjang, angka } from '../../shared/statistik.js';
 import { api } from '../api.js';
 import { dataKegiatan, segarkanData } from '../data.js';
 import { esc, $, toast, unduh } from '../ui.js';
-import { formHtml, bacaForm, tampilGalat } from './form.js';
+import { formHtml, bacaForm, tampilGalat, pasangForm } from './form.js';
 import { IKON } from '../ikon.js';
 
 let cari = '';
@@ -33,14 +33,14 @@ export async function viewDaftar(el: HTMLElement) {
     const l = semua.filter(
       (k) =>
         (!wilayah || k.kabkota === wilayah) &&
-        (!q || [k.judul, k.tempat, k.pengundang, k.tema, k.narasumber.join(' '), k.kabkota].join(' ').toLowerCase().includes(q)),
+        (!q || [k.judul, k.tempat, k.pengundang, k.tema, k.narasumber.join(' '), k.kabkota, k.kecamatan].join(' ').toLowerCase().includes(q)),
     );
     tabel.innerHTML = l.length
       ? `<table class="tbl"><thead><tr><th>Tanggal</th><th>Kegiatan</th><th>Wilayah</th><th>Sasaran</th><th class="r">Peserta</th></tr></thead><tbody>${l
           .map(
             (k) => `<tr data-id="${k.id}" tabindex="0"><td class="nw">${tanggalPanjang(k.tanggal)}</td><td><a href="#/kegiatan/${k.id}">${esc(k.judul)}</a><span class="sub">${esc(
               k.tempat,
-            )}</span></td><td>${esc(k.kabkota)}</td><td>${esc(k.sasaran.join(', '))}</td><td class="r">${k.pesertaPerkiraan ? '±' : ''}${angka(k.peserta || 0)}</td></tr>`,
+            )}</span></td><td>${esc(k.kabkota)}${k.kecamatan ? `<span class="sub">Kec. ${esc(k.kecamatan)}</span>` : ''}</td><td>${esc(k.sasaran.join(', '))}</td><td class="r">${k.pesertaPerkiraan ? '±' : ''}${angka(k.peserta || 0)}</td></tr>`,
           )
           .join('')}</tbody></table>`
       : `<p class="sub kosong-kecil">${semua.length ? 'Tidak ada kegiatan yang cocok dengan pencarian.' : 'Belum ada kegiatan. Unggah laporan pertama.'}</p>`;
@@ -73,6 +73,7 @@ const KOLOM: [string, (k: Kegiatan) => unknown][] = [
   ['Peran OJK', (k) => k.peranOjk],
   ['Tempat', (k) => k.tempat],
   ['Kabupaten/kota', (k) => k.kabkota],
+  ['Kecamatan', (k) => k.kecamatan],
   ['Mode', (k) => k.mode],
   ['Narasumber', (k) => k.narasumber.join('; ')],
   ['Sasaran', (k) => k.sasaran.join('; ')],
@@ -109,6 +110,7 @@ export async function viewDetail(el: HTMLElement, id: string) {
   }${k.diubah !== k.dibuat ? ' · diubah ' + new Date(k.diubah).toLocaleDateString('id-ID', { dateStyle: 'long' }) : ''}</p></header>
   <section class="kartu">${formHtml(k)}<div class="aksi"><button class="btn bahaya" id="hapus">Hapus</button><button class="btn utama" id="simpan">Simpan perubahan</button></div></section>`;
   const form = $<HTMLFormElement>('form', el);
+  pasangForm(form);
   $('#simpan', el).onclick = async (e) => {
     const b = e.currentTarget as HTMLButtonElement;
     const isian = bacaForm(form, k);

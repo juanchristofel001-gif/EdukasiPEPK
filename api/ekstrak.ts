@@ -3,6 +3,7 @@
 // dan mengembalikan isian kegiatan untuk dicek tim. Tidak menyimpan apa pun.
 import { izinkan, fail, ok, type Req, type Res } from './_lib/http.js';
 import { generate, parseJson, GeminiError, type Part } from './_lib/gemini.js';
+import { KECAMATAN } from '../shared/kecamatan.js';
 import { KABKOTA, KABKOTA_LAIN, MODE, PERAN_OJK, SASARAN, TOPIK, KANAL, METODE, rapikan } from '../shared/schema.js';
 
 const MIME = ['image/jpeg', 'image/png', 'image/webp'];
@@ -21,6 +22,8 @@ Ambil data kegiatan dari laporan dan jawab HANYA dengan satu objek JSON berikut:
  "tempat": "tempat seperti tertulis di laporan",
  "kabkota": salah satu dari [${daftar([...KABKOTA, ...KABKOTA_LAIN])}],
  "kabkotaDitebak": true jika kabupaten/kota TIDAK tertulis di laporan dan kamu menyimpulkannya dari nama tempat, false jika tertulis,
+ "kecamatan": nama kecamatan lokasi kegiatan, dipilih dari daftar kecamatan kabupaten/kota tersebut di bawah; "" jika daring/luar Banten atau benar-benar tidak bisa ditentukan,
+ "kecamatanDitebak": true jika kecamatan TIDAK tertulis di laporan dan kamu menyimpulkannya dari nama/alamat tempat,
  "mode": salah satu dari [${daftar(MODE)}],
  "narasumber": ["nama narasumber"],
  "sasaran": array dari [${daftar(SASARAN)}],
@@ -37,7 +40,12 @@ Aturan:
 - Pakai nilai daftar persis seperti tertulis. Jika tidak ada yang cocok, pakai "Lainnya" (untuk sasaran/topik/kanal) atau "" (untuk pilihan tunggal).
 - Jangan mengarang. Jika informasi tidak ada di laporan, isi "" atau null atau [].
 - Jangan memasukkan nama peserta, NIK, nomor HP, atau data pribadi peserta ke kolom mana pun.
+- Untuk menebak kab/kota dan kecamatan dari nama tempat (sekolah, kampus, desa, kantor), pakai pengetahuanmu tentang lokasi tempat itu di Banten.
 - Nama penandatangan laporan BUKAN narasumber kecuali disebut sebagai pembawa materi.`;
+
+const DAFTAR_KEC = Object.entries(KECAMATAN)
+  .map(([k, l]) => `${k}: ${l.join(', ')}`)
+  .join('\n');
 
 const CONTOH = {
   judul: 'Edukasi Keuangan SMA Athalia Entrepreneurship Week 2026',
@@ -48,6 +56,8 @@ const CONTOH = {
   tempat: 'SMA Athalia',
   kabkota: 'Kabupaten Tangerang',
   kabkotaDitebak: true,
+  kecamatan: 'Kelapa Dua',
+  kecamatanDitebak: true,
   mode: 'Luring',
   narasumber: ['Rija Fathul Bari'],
   sasaran: ['Pelajar SMA/SMK'],
@@ -66,7 +76,7 @@ export default async function handler(req: Req, res: Res) {
   if (!izinkan(req, res)) return;
   const b = (req.body || {}) as { nama?: string; teks?: string; gambar?: { mime?: string; data?: string }[] };
   const nama = String(b.nama || 'laporan').slice(0, 200);
-  const parts: Part[] = [{ text: PROMPT }];
+  const parts: Part[] = [{ text: PROMPT + '\n\nDaftar kecamatan di Banten:\n' + DAFTAR_KEC }];
   const gambar = Array.isArray(b.gambar) ? b.gambar.slice(0, 8) : [];
   if (typeof b.teks === 'string' && b.teks.trim()) {
     parts.push({ text: 'Isi laporan:\n' + b.teks.slice(0, 60000) });

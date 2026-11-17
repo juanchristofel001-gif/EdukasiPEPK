@@ -1,6 +1,7 @@
 // Form isian satu kegiatan. Dipakai untuk mengecek hasil AI dan untuk mengubah kegiatan yang sudah tersimpan.
 import { KABKOTA, KABKOTA_LAIN, MODE, PERAN_OJK, SASARAN, TOPIK, KANAL, METODE, rapikan, type KegiatanInput } from '../../shared/schema.js';
 import { esc, $, $$ } from '../ui.js';
+import { KECAMATAN } from '../../shared/kecamatan.js';
 
 const pilihan = (nama: string, list: readonly string[], nilai: string, kosong = 'Pilih…') =>
   `<select name="${nama}"><option value="">${kosong}</option>${list
@@ -20,11 +21,36 @@ const field = (label: string, isi: string, opt: { lebar?: boolean; catatan?: str
     opt.catatan ? `<span class="hint">${opt.catatan}</span>` : ''
   }</div>`;
 
+function opsiKec(kab: string, nilai: string) {
+  const l = KECAMATAN[kab];
+  if (!kab) return '<option value="">Pilih kabupaten/kota dulu</option>';
+  if (!l) return '<option value="">Tidak perlu (bukan wilayah Banten)</option>';
+  return `<option value="">Pilih kecamatan…</option>${l.map((x) => `<option${x === nilai ? ' selected' : ''}>${esc(x)}</option>`).join('')}`;
+}
+
+// Pilihan kecamatan mengikuti kabupaten/kota yang dipilih.
+export function pasangForm(form: HTMLFormElement) {
+  const kab = $<HTMLSelectElement>('[name="kabkota"]', form);
+  const kec = $<HTMLSelectElement>('[name="kecamatan"]', form);
+  kab.addEventListener('change', () => {
+    kec.innerHTML = opsiKec(kab.value, '');
+    kec.disabled = !KECAMATAN[kab.value];
+    kec.closest('.field')?.querySelector('.warn')?.remove();
+  });
+  kec.disabled = !KECAMATAN[kab.value];
+}
+
 export function formHtml(k: KegiatanInput, opt: { tandaiAi?: boolean } = {}) {
   const wilayahHint =
     opt.tandaiAi && k.kabkotaDitebak
       ? '<span class="warn">Tidak tertulis di laporan, ditebak AI dari nama tempat. Pastikan benar.</span>'
       : '';
+  const kecHint =
+    opt.tandaiAi && k.kecamatanDitebak && k.kecamatan
+      ? '<span class="warn">Kecamatan ditebak AI dari nama tempat. Pastikan benar.</span>'
+      : opt.tandaiAi && !k.kecamatan && KECAMATAN[k.kabkota]
+        ? '<span class="warn">AI tidak menemukan kecamatannya. Pilih manual.</span>'
+        : '';
   const pesertaHint = k.pesertaPerkiraan ? 'Ditandai sebagai perkiraan.' : '';
   return `<form class="kform" novalidate>
   <div class="grid">
@@ -42,6 +68,7 @@ export function formHtml(k: KegiatanInput, opt: { tandaiAi?: boolean } = {}) {
       )}</optgroup></select>${wilayahHint}`,
       { wajib: true },
     )}
+    ${field('Kecamatan', `<select name="kecamatan">${opsiKec(k.kabkota, k.kecamatan)}</select>${kecHint}`, { wajib: true })}
     ${field('Pengundang / mitra', `<input name="pengundang" value="${esc(k.pengundang)}" placeholder="Misal: SMA Athalia">`)}
     ${field('Peran OJK', pilihan('peranOjk', PERAN_OJK, k.peranOjk))}
     ${field('Jumlah peserta', `<div class="row"><input type="number" min="0" name="peserta" value="${k.peserta ?? ''}" required><label class="cek"><input type="checkbox" name="pesertaPerkiraan"${k.pesertaPerkiraan ? ' checked' : ''}> perkiraan</label></div>`, { wajib: true, catatan: pesertaHint })}
@@ -72,6 +99,8 @@ export function bacaForm(form: HTMLFormElement, dasar: KegiatanInput): KegiatanI
     tempat: v('tempat'),
     kabkota: v('kabkota'),
     kabkotaDitebak: dasar.kabkotaDitebak && v('kabkota') === dasar.kabkota,
+    kecamatan: v('kecamatan'),
+    kecamatanDitebak: dasar.kecamatanDitebak && v('kecamatan') === dasar.kecamatan,
     pengundang: v('pengundang'),
     peranOjk: v('peranOjk'),
     peserta: v('peserta') === '' ? null : Number(v('peserta')),
