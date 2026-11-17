@@ -218,3 +218,24 @@ export function tooltipHtml(nama: string, s: Statistik) {
     w.terakhir ? 'Terakhir ' + tanggalPendek(w.terakhir) : 'Belum ada kegiatan'
   }</span>`;
 }
+
+// Ikon kecil bentuk satu wilayah (siluet), diwarnai sesuai kelas nilainya.
+// Wilayah yang tidak ada di data peta mendapat ikon penanda biasa.
+export function ikonWilayah(g: Geo, nama: string, ki: number) {
+  const w = g.wilayah.find((x) => x.nama === nama);
+  const isi = ki < 0 ? KOSONG : SKALA[ki];
+  if (!w) return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-6-5.6-6-10a6 6 0 1 1 12 0c0 4.4-6 10-6 10z" fill="${isi}" stroke="#8a8590"/></svg>`;
+  const pts = w.poligon.flatMap((p) => p[0]);
+  const lat = pts.map((p) => p[1]);
+  const k = Math.cos(((Math.min(...lat) + Math.max(...lat)) / 2) * (Math.PI / 180));
+  const xs = pts.map((p) => p[0] * k),
+    ys = pts.map((p) => -p[1]);
+  const x0 = Math.min(...xs), y0 = Math.min(...ys);
+  const sc = 32 / Math.max(Math.max(...xs) - x0, Math.max(...ys) - y0);
+  const ox = (36 - (Math.max(...xs) - x0) * sc) / 2,
+    oy = (36 - (Math.max(...ys) - y0) * sc) / 2;
+  const d = w.poligon
+    .map((pl) => pl.map((ring) => 'M' + ring.map((p) => `${(ox + (p[0] * k - x0) * sc).toFixed(1)},${(oy + (-p[1] - y0) * sc).toFixed(1)}`).join('L') + 'Z').join(''))
+    .join('');
+  return `<svg viewBox="0 0 36 36" aria-hidden="true"><path d="${d}" fill="${isi}" stroke="${ki < 0 ? '#b9b5bf' : 'rgba(0,0,0,.25)'}" stroke-width="0.8" stroke-linejoin="round"/></svg>`;
+}

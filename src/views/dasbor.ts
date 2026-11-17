@@ -4,7 +4,7 @@ import { statistik, teksStatus, namaBulan, tanggalPanjang, tanggalPendek, angka,
 import { api } from '../api.js';
 import { dataKegiatan } from '../data.js';
 import { esc, $, $$, hariIni, selisihHari, salin, toast } from '../ui.js';
-import { muatPeta, petaSvg, tooltipHtml, batasLegenda, kelas, SKALA, KOSONG, type Ukuran, type Tingkat } from './peta.js';
+import { muatPeta, petaSvg, tooltipHtml, batasLegenda, kelas, ikonWilayah, SKALA, KOSONG, type Ukuran, type Tingkat } from './peta.js';
 import { JUMLAH_KECAMATAN } from '../../shared/kecamatan.js';
 import { IKON } from '../ikon.js';
 
@@ -129,8 +129,8 @@ function wilayahHtml(s: Statistik, h: string) {
       const lama = w.terakhir ? selisihHari(w.terakhir, h) : null;
       const ket = !w.kegiatan
         ? '<span class="tag merah">Belum ada kegiatan</span>'
-        : `<span class="kapan${lama! > 90 ? ' lama' : ''}">${tanggalPendek(w.terakhir!)}${lama! > 0 ? ` · ${lama} hari lalu` : ''}</span>`;
-      return `<li class="${w.kegiatan ? '' : 'nol'}" data-nama="${esc(w.nama)}"><div class="wl-k"><span class="wn">${w.nama.replace('Kabupaten ', 'Kab. ')}</span>${ket}</div><div class="wl-n"><b>${w.kegiatan}</b><span>${angka(w.peserta)} peserta · ${w.kecTerjangkau}/${w.kecTotal} kec</span></div></li>`;
+        : `<span class="kapan${lama! > 90 ? ' lama' : ''}" title="Kegiatan terakhir${lama! > 0 ? `, ${lama} hari lalu` : ''}">${tanggalPendek(w.terakhir!)}</span>`;
+      return `<li class="${w.kegiatan ? '' : 'nol'}" data-nama="${esc(w.nama)}"><span class="wl-ikon" data-ikon="${esc(w.nama)}"></span><div class="wl-k"><span class="wn">${w.nama.replace('Kabupaten ', 'Kab. ')}</span>${ket}</div><div class="wl-n"><b>${w.kegiatan}</b><span>${angka(w.peserta)} peserta</span><span>${w.kecTerjangkau}/${w.kecTotal} kecamatan</span></div></li>`;
     })
     .join('')}</ol>`;
 }
@@ -182,6 +182,11 @@ async function pasangPeta(el: HTMLElement, s: Statistik) {
     box.innerHTML = `<p class="galat">${esc(e.message)}</p>`;
     return;
   }
+  const maksKab = Math.max(0, ...s.perWilayah.map((w) => w.kegiatan));
+  $$('.wl-ikon', el).forEach((i) => {
+    const w = s.perWilayah.find((x) => x.nama === i.dataset.ikon);
+    i.innerHTML = ikonWilayah(wil, i.dataset.ikon!, kelas(w?.kegiatan || 0, maksKab));
+  });
   const gambar = () => {
     if (!box.isConnected) return;
     const r = petaSvg(wil, s, ukuran, box.clientWidth < 520, tingkat);
