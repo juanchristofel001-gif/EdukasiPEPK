@@ -126,7 +126,7 @@ function dokumen(d: DataLaporan, desk: Record<Bagian, string>, geo: Geo, p: Peri
   </div></section>`);
   const grafik: Record<Bagian, string> = {
     peta: petaLaporan(d, geo),
-    wilayah: tabelWilayah(d),
+    wilayah: tabelWilayah(d, geo),
     tren: trenHtml(d) + `<p class="lap-kecil">Angka di atas batang: jumlah kegiatan per bulan.</p>`,
     peserta: bar(d.kelasPeserta, { satuan: 'kegiatan', urut: false }) + terbesar(d),
     sasaran: bar(d.sasaran.slice(0, 10), { satuan: 'kegiatan' }),
@@ -163,15 +163,42 @@ function terbesar(d: DataLaporan) {
     .join('')}</tbody></table>`;
 }
 
-function tabelWilayah(d: DataLaporan) {
+function tabelWilayah(d: DataLaporan, geo: Geo) {
   const urut = [...d.perWilayah].sort((a, b) => b.kegiatan - a.kegiatan || b.peserta - a.peserta);
-  const mx = Math.max(1, ...urut.map((w) => w.kegiatan));
-  return `<table class="lap-tabel"><thead><tr><th>Kabupaten/kota</th><th>Kegiatan</th><th class="n">Peserta</th><th class="n">Kecamatan</th></tr></thead><tbody>${urut
+  const mk = Math.max(1, ...urut.map((w) => w.kegiatan));
+  const mp = Math.max(1, ...urut.map((w) => w.peserta));
+  const sel = (v: number, mx: number, teks: string) =>
+    `<td><span class="lkb"><i style="width:${v ? Math.max(1.5, (v / mx) * 100) : 0}%"></i></span><b>${teks}</b></td>`;
+  return `${petaKab(d, geo)}
+  <table class="lap-tabel lap-kab"><colgroup><col style="width:22%"><col style="width:22%"><col style="width:28%"><col style="width:28%"></colgroup><thead><tr><th>Kabupaten/kota</th><th>Kegiatan</th><th>Peserta</th><th>Kecamatan terjangkau</th></tr></thead><tbody>${urut
     .map(
       (w) =>
-        `<tr${w.kegiatan ? '' : ' class="nol"'}><td>${esc(w.nama)}</td><td><span class="lap-mini"><i style="width:${(w.kegiatan / mx) * 100}%"></i></span><b>${w.kegiatan}</b></td><td class="n">${angka(w.peserta)}</td><td class="n">${w.kecTerjangkau}/${w.kecTotal}</td></tr>`,
+        `<tr${w.kegiatan ? '' : ' class="nol"'}><td class="nm">${esc(w.nama.replace('Kabupaten ', 'Kab. '))}</td>${sel(w.kegiatan, mk, angka(w.kegiatan))}${sel(w.peserta, mp, angka(w.peserta))}${sel(
+          w.kecTerjangkau,
+          w.kecTotal,
+          `${w.kecTerjangkau}/${w.kecTotal}`,
+        ).replace('class="lkb"', 'class="lkb cak"')}</tr>`,
     )
-    .join('')}</tbody></table>`;
+    .join('')}</tbody></table>
+  <p class="lap-kecil">Batang kegiatan dan peserta dibandingkan dengan kab/kota tertinggi; batang kecamatan menunjukkan porsi kecamatan di kab/kota itu yang sudah dijangkau.</p>`;
+}
+
+function petaKab(d: DataLaporan, geo: Geo) {
+  const r = petaSvg(geo, d, 'kegiatan', false, 'kabkota');
+  const bl = batasLegenda(r.maks);
+  const leg =
+    `<span class="lg"><i style="background:${KOSONG}"></i>0</span>` +
+    bl.map((t, i) => `<span class="lg"><i style="background:${SKALA[r.maks <= SKALA.length ? kelas(i + 1, r.maks) : i]}"></i>${t}</span>`).join('') +
+    `<span class="lg-unit">kegiatan per kab/kota</span>`;
+  return `<div class="peta lap-peta">${warnaSvg(r.svg)}</div><div class="legenda">${leg}</div>`;
+}
+
+// Warna ditulis langsung di elemen SVG supaya tetap benar saat diubah menjadi gambar untuk PDF.
+function warnaSvg(svg: string) {
+  return svg
+    .replaceAll('class="batas-kab"', 'class="batas-kab" fill="none" stroke="#4a4650" stroke-width="1.1"')
+    .replace(/(<g class="pl luar"[^>]*>)<path /g, '$1<path fill="none" stroke="#a39fa8" ')
+    .replaceAll('<text ', '<text style="fill:#1c1a1d;stroke:rgba(255,255,255,0.92);stroke-width:3.5px;paint-order:stroke;stroke-linejoin:round" ');
 }
 
 function petaLaporan(d: DataLaporan, geo: Geo) {
@@ -181,10 +208,7 @@ function petaLaporan(d: DataLaporan, geo: Geo) {
     `<span class="lg"><i style="background:${KOSONG}"></i>0</span>` +
     bl.map((t, i) => `<span class="lg"><i style="background:${SKALA[r.maks <= SKALA.length ? kelas(i + 1, r.maks) : i]}"></i>${t}</span>`).join('') +
     `<span class="lg-unit">kegiatan per kecamatan</span>`;
-  // Warna ditulis langsung di elemen SVG supaya tetap benar saat diubah menjadi gambar untuk PDF.
-  const svg = r.svg
-    .replaceAll('class="batas-kab"', 'class="batas-kab" fill="none" stroke="#4a4650" stroke-width="1.1"')
-    .replace(/(<g class="pl luar"[^>]*>)<path /g, '$1<path fill="none" stroke="#a39fa8" ');
+  const svg = warnaSvg(r.svg);
   return `<div class="peta lap-peta">${svg}</div><div class="legenda">${leg}</div>`;
 }
 

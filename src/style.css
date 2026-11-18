@@ -507,3 +507,10 @@ input.ro { color: var(--mute); }
   .lap-bar li { grid-template-columns: minmax(0, 120px) 1fr 40px; }
   .lap-mini { width: 60px; }
 }
+.lap-kab { margin-top: 18px; table-layout: fixed; }
+.lap-kab td { vertical-align: middle; }
+.lap-kab td.nm { font-weight: 600; white-space: nowrap; }
+.lap-kab td b { display: inline-block; min-width: 58px; white-space: nowrap; text-align: right; margin-left: 6px; font-variant-numeric: tabular-nums; }
+.lkb { display: inline-block; width: calc(100% - 68px); height: 11px; background: #f3f1f5; border-radius: 3px; overflow: hidden; vertical-align: middle; }
+.lkb i { display: block; height: 100%; background: var(--biru); border-radius: 0 3px 3px 0; }
+.lkb.cak i { background: var(--h3); }
