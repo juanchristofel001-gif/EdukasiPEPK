@@ -115,6 +115,13 @@ function lokal(): Store {
     await fs.mkdir(dir, { recursive: true });
     await fs.writeFile(f, JSON.stringify(v, null, 1));
   };
+  // File lokal dibaca-ubah-tulis; antrean ini mencegah dua penulisan bersamaan saling menimpa.
+  let antre: Promise<unknown> = Promise.resolve();
+  const urutan = <T>(f: () => Promise<T>): Promise<T> => {
+    const p = antre.then(f, f);
+    antre = p.catch(() => {});
+    return p;
+  };
   const cfile = path.join(dir, 'cadangan.json');
   const rfile = path.join(dir, 'riwayat.json');
   return {
@@ -124,29 +131,37 @@ function lokal(): Store {
     async get(id) {
       return (await read<Baris[]>(file, [])).find((k) => k.id === id) || null;
     },
-    async put(k) {
-      const all = (await read<Baris[]>(file, [])).filter((x) => x.id !== k.id);
-      all.push(k);
-      await write(file, all);
+    put(k) {
+      return urutan(async () => {
+        const all = (await read<Baris[]>(file, [])).filter((x) => x.id !== k.id);
+        all.push(k);
+        await write(file, all);
+      });
     },
-    async remove(id) {
-      const all = await read<Kegiatan[]>(file, []);
-      const rest = all.filter((x) => x.id !== id);
-      await write(file, rest);
-      return rest.length !== all.length;
+    remove(id) {
+      return urutan(async () => {
+        const all = await read<Kegiatan[]>(file, []);
+        const rest = all.filter((x) => x.id !== id);
+        await write(file, rest);
+        return rest.length !== all.length;
+      });
     },
     async getMeta(key) {
       return (await read<Record<string, Meta>>(mfile, {}))[key] || null;
     },
-    async setMeta(key, v) {
-      const m = await read<Record<string, Meta>>(mfile, {});
-      m[key] = v;
-      await write(mfile, m);
+    setMeta(key, v) {
+      return urutan(async () => {
+        const m = await read<Record<string, Meta>>(mfile, {});
+        m[key] = v;
+        await write(mfile, m);
+      });
     },
-    async simpanCadangan(c) {
-      const m = await read<Record<string, Cadangan>>(cfile, {});
-      m[c.tanggal] = c;
-      await write(cfile, m);
+    simpanCadangan(c) {
+      return urutan(async () => {
+        const m = await read<Record<string, Cadangan>>(cfile, {});
+        m[c.tanggal] = c;
+        await write(cfile, m);
+      });
     },
     async daftarCadangan() {
       const m = await read<Record<string, Cadangan>>(cfile, {});
@@ -157,15 +172,19 @@ function lokal(): Store {
     async ambilCadangan(t) {
       return (await read<Record<string, Cadangan>>(cfile, {}))[t] || null;
     },
-    async hapusCadangan(t) {
-      const m = await read<Record<string, Cadangan>>(cfile, {});
-      delete m[t];
-      await write(cfile, m);
+    hapusCadangan(t) {
+      return urutan(async () => {
+        const m = await read<Record<string, Cadangan>>(cfile, {});
+        delete m[t];
+        await write(cfile, m);
+      });
     },
-    async catat(r) {
-      const l = await read<Riwayat[]>(rfile, []);
-      l.push(r);
-      await write(rfile, l);
+    catat(r) {
+      return urutan(async () => {
+        const l = await read<Riwayat[]>(rfile, []);
+        l.push(r);
+        await write(rfile, l);
+      });
     },
     async riwayat(batas) {
       return (await read<Riwayat[]>(rfile, [])).sort((a, b) => b.waktu.localeCompare(a.waktu)).slice(0, batas);
@@ -205,15 +224,22 @@ export async function buatCadangan() {
   return tanggal;
 }
 
+// Cadangan kondisi saat ini dengan nama khusus, mis. "2026-11-18 sebelum impor 07.45".
+export async function cadanganSebelum(apa: string) {
+  const s = await db();
+  const sekarang = await s.semua();
+  const waktu = new Date(Date.now() + 7 * 3600e3).toISOString();
+  await s.simpanCadangan({ tanggal: `${waktu.slice(0, 10)} sebelum ${apa} ${waktu.slice(11, 16).replace(':', '.')}`, dibuat: new Date().toISOString(), jumlah: sekarang.filter((k) => !k.dihapus).length, kegiatan: sekarang });
+  return sekarang;
+}
+
 // Kembalikan data ke isi satu cadangan. Aman: kegiatan yang dibuat setelah cadangan itu
 // tidak dihapus, hanya dipindah ke sampah; kondisi sekarang dicadangkan dulu.
 export async function pulihkanCadangan(tanggal: string, oleh = '') {
   const s = await db();
   const c = await s.ambilCadangan(tanggal);
   if (!c) throw new DbError('Cadangan tidak ditemukan.', 404);
-  const sekarang = await s.semua();
-  const waktu = new Date(Date.now() + 7 * 3600e3).toISOString();
-  await s.simpanCadangan({ tanggal: `${waktu.slice(0, 10)} sebelum pemulihan ${waktu.slice(11, 16).replace(':', '.')}`, dibuat: new Date().toISOString(), jumlah: sekarang.filter((k) => !k.dihapus).length, kegiatan: sekarang });
+  const sekarang = await cadanganSebelum('pemulihan');
   const ada = new Set(c.kegiatan.map((k) => k.id));
   for (const k of c.kegiatan as Baris[]) await s.put(k);
   const kini = new Date().toISOString();

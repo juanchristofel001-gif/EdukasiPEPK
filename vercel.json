@@ -8,6 +8,12 @@
     },
     "api/insight.ts": {
       "maxDuration": 60
+    },
+    "api/lengkapi.ts": {
+      "maxDuration": 60
+    },
+    "api/kegiatan.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [

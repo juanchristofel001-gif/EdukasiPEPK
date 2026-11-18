@@ -16,6 +16,7 @@ Fungsi server Vercel (folder api/)
    ├─ api/akses.ts     cek kode akses
    ├─ api/ekstrak.ts   kirim laporan ke Gemini → isian kegiatan (tidak menyimpan apa pun)
    ├─ api/kegiatan.ts  baca / simpan / ubah kegiatan; hapus = pindah ke sampah, bisa dipulihkan
+   ├─ api/lengkapi.ts  impor Excel: AI menebak kolom kosong (kab/kota, kecamatan, sasaran, topik), ditandai 'ditebak'
    ├─ api/riwayat.ts   log aktivitas: siapa menambah/mengubah/menghapus/memulihkan, kolom apa berubah
    ├─ api/cadangan.ts  cadangan harian seluruh data (Vercel Cron 00.00 WIB, 30 hari disimpan)
    └─ api/insight.ts   hitung rekap dari database → Gemini menafsirkan → disimpan
@@ -38,6 +39,7 @@ Koleksi Firestore: `kegiatan` (data, termasuk yang di sampah dengan kolom `dihap
 | Folder | Isi |
 |---|---|
 | `shared/schema.ts` | **Model data**: kolom kegiatan, daftar pilihan (kab/kota, sasaran, topik, dll.), aturan validasi. Dipakai server dan browser. |
+| `shared/impor.ts` | Impor Excel/CSV: pencocokan judul kolom, pembacaan tanggal/wilayah/kecamatan (toleran salah ketik), deteksi kegiatan ganda. |
 | `shared/statistik.ts` | Perhitungan rekap (per wilayah, per bulan, dll.) dan teks "Salin status". |
 | `api/` | Fungsi server. `api/_lib/` berisi koneksi Gemini, database, dan pengecekan kode akses. |
 | `src/` | Tampilan website. `src/views/` satu file per halaman. |

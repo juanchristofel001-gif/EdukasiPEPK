@@ -184,7 +184,7 @@ export const LABEL: Partial<Record<keyof KegiatanInput, string>> = {
   dicatatOleh: 'Dicatat oleh',
 };
 
-export type Aksi = 'tambah' | 'ubah' | 'sampah' | 'pulihkan' | 'hapus-permanen' | 'pulihkan-cadangan';
+export type Aksi = 'tambah' | 'ubah' | 'sampah' | 'pulihkan' | 'hapus-permanen' | 'pulihkan-cadangan' | 'impor';
 export type Riwayat = {
   id: string;
   waktu: string; // ISO

@@ -23,7 +23,7 @@ export function viewUnggah(el: HTMLElement) {
     <strong>Pilih file laporan</strong>
     <span>atau tarik ke sini · PDF, Word (.docx), atau foto · foto dokumentasi di dalamnya tidak masalah</span>
   </label>
-  <div class="manual"><span>Tidak ada laporannya?</span><button class="btn lembut" id="manual">${IKON.daftar}Isi manual tanpa laporan</button></div>
+  <div class="manual"><span>Tidak ada laporannya?</span><button class="btn lembut" id="manual">${IKON.pena}Isi manual</button><a class="btn lembut" href="#/impor">${IKON.daftar}Impor dari Excel</a></div>
   <div id="antrean"></div>`;
   $('#manual', el).onclick = () => {
     antrean.unshift({ id: ++nomor, nama: '', status: 'cek', isian: kosong('') });

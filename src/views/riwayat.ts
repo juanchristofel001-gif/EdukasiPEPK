@@ -13,6 +13,7 @@ const KATA: Record<Riwayat['aksi'], [string, string, string]> = {
   pulihkan: ['memulihkan dari sampah', IKON.pulih, 'hijau'],
   'hapus-permanen': ['menghapus permanen', IKON.sampah, 'merah'],
   'pulihkan-cadangan': ['memulihkan data dari', IKON.pulih, 'kuning'],
+  impor: ['mengimpor kegiatan dari', IKON.unggah, 'hijau'],
 };
 
 const jam = (iso: string) => new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });

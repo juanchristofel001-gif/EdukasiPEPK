@@ -3,11 +3,12 @@
 //   GET    ?sampah=1       → kegiatan di sampah
 //   POST                   → simpan kegiatan baru (body = isian)
 //   POST   ?pulihkan=id    → keluarkan kegiatan dari sampah
+//   POST   ?impor=1        → simpan banyak kegiatan sekaligus dari file Excel/CSV (body {file, isian[]})
 //   PUT    ?id=…           → ubah kegiatan
 //   DELETE ?id=…           → pindahkan ke sampah
 //   DELETE ?id=…&permanen=1 → hapus permanen (hanya untuk yang sudah di sampah)
 import { izinkan, fail, ok, namaPengguna, type Req, type Res } from './_lib/http.js';
-import { db, baru, aktif, sampah, catat, DbError } from './_lib/db.js';
+import { db, baru, aktif, sampah, catat, cadanganSebelum, DbError } from './_lib/db.js';
 import { rapikan, periksa, beda } from '../shared/schema.js';
 
 export default async function handler(req: Req, res: Res) {
@@ -20,6 +21,19 @@ export default async function handler(req: Req, res: Res) {
       case 'GET':
         return ok(res, { kegiatan: req.query.sampah ? await sampah() : await aktif() });
       case 'POST': {
+        if (req.query.impor) {
+          const file = String(req.body?.file || 'file').slice(0, 120);
+          const daftar = (Array.isArray(req.body?.isian) ? req.body.isian : []).slice(0, 2000).map((x: Record<string, unknown>) => rapikan({ ...x, sumberFile: file }));
+          const salah = daftar.map((k: ReturnType<typeof rapikan>, i: number) => ({ i, e: periksa(k) })).filter((x: { e: string[] }) => x.e.length);
+          if (!daftar.length) return fail(res, 400, 'Tidak ada baris untuk diimpor.');
+          if (salah.length) return fail(res, 400, `${salah.length} baris belum lengkap (mis. baris ke-${salah[0].i + 1}: ${salah[0].e.join(' ')}).`);
+          await cadanganSebelum('impor');
+          const baruL = daftar.map(baru);
+          for (let i = 0; i < baruL.length; i += 25) await Promise.all(baruL.slice(i, i + 25).map((k: ReturnType<typeof baru>) => s.put(k)));
+          const peserta = baruL.reduce((t: number, k: ReturnType<typeof baru>) => t + (k.peserta || 0), 0);
+          await catat({ aksi: 'impor', oleh, kegiatanId: '', judul: file, catatan: `${baruL.length} kegiatan, ${peserta.toLocaleString('id-ID')} peserta. Cadangan sebelum impor dibuat otomatis.` });
+          return ok(res, { jumlah: baruL.length });
+        }
         const pul = String(req.query.pulihkan || '');
         if (pul) {
           const k = await s.get(pul);
