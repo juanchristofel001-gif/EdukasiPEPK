@@ -91,6 +91,9 @@ export type Kegiatan = {
   metode: (typeof METODE)[number][];
   ringkasan: string;
   catatan: string; // respons peserta, kendala, pertanyaan yang sering muncul
+  jamMulai: string; // "09.30" (opsional, untuk laporan Word)
+  jamSelesai: string; // jam edukasi selesai, "10.30" (opsional)
+  naskah: Naskah | null; // naskah laporan Word yang sudah disunting tim
   sumberFile: string; // nama file laporan asal (file-nya sendiri tidak disimpan)
   dicatatOleh: string;
   dibuat: string; // ISO timestamp
@@ -98,6 +101,27 @@ export type Kegiatan = {
 };
 
 export type KegiatanInput = Omit<Kegiatan, 'id' | 'dibuat' | 'diubah'>;
+
+// Naskah laporan Word (bagian A–E). Disimpan supaya laporan bisa diunduh ulang dengan isi yang sama.
+export const BAGIAN_NASKAH = [
+  ['pendahuluan', 'A. Pendahuluan'],
+  ['pelaksanaan', 'B. Pelaksanaan Kegiatan'],
+  ['peserta', 'C. Peserta'],
+  ['kesimpulan', 'D. Kesimpulan'],
+  ['penutup', 'E. Penutup'],
+] as const;
+export type Naskah = Record<(typeof BAGIAN_NASKAH)[number][0], string>;
+
+const jam = (v: unknown) => {
+  const m = str(v, 8).match(/^(\d{1,2})[.:](\d{2})$/);
+  return m && +m[1] < 24 && +m[2] < 60 ? `${m[1].padStart(2, '0')}.${m[2]}` : '';
+};
+function naskahDari(v: unknown): Naskah | null {
+  if (!v || typeof v !== 'object') return null;
+  const o = v as Record<string, unknown>;
+  const n = Object.fromEntries(BAGIAN_NASKAH.map(([k]) => [k, str(o[k], 4000)])) as Naskah;
+  return Object.values(n).some(Boolean) ? n : null;
+}
 
 const str = (v: unknown, max = 500) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
 const pick = <T extends readonly string[]>(list: T, v: unknown): T[number] | '' => {
@@ -157,6 +181,9 @@ export function rapikan(raw: Record<string, unknown>): KegiatanInput {
     metode: picks(METODE, raw.metode),
     ringkasan: str(raw.ringkasan, 1200),
     catatan: str(raw.catatan, 1200),
+    jamMulai: jam(raw.jamMulai),
+    jamSelesai: jam(raw.jamSelesai),
+    naskah: naskahDari(raw.naskah),
     sumberFile: str(raw.sumberFile, 200),
     dicatatOleh: str(raw.dicatatOleh, 80),
   };
@@ -199,6 +226,9 @@ export const LABEL: Partial<Record<keyof KegiatanInput, string>> = {
   metode: 'Metode',
   ringkasan: 'Ringkasan',
   catatan: 'Catatan lapangan',
+  jamMulai: 'Jam mulai',
+  jamSelesai: 'Jam selesai',
+  naskah: 'Naskah laporan Word',
   dicatatOleh: 'Dicatat oleh',
 };
 
@@ -214,7 +244,8 @@ export type Riwayat = {
   catatan?: string;
 };
 
-const tampil = (v: unknown) => (Array.isArray(v) ? v.join(', ') : typeof v === 'boolean' ? (v ? 'ya' : 'tidak') : v === null || v === undefined ? '' : String(v));
+const tampil = (v: unknown): string =>
+  Array.isArray(v) ? v.join(', ') : typeof v === 'boolean' ? (v ? 'ya' : 'tidak') : v === null || v === undefined ? '' : typeof v === 'object' ? Object.values(v).filter(Boolean).join(' | ') : String(v);
 // Daftar kolom yang berubah antara dua versi kegiatan.
 export function beda(lama: Partial<KegiatanInput>, baru: Partial<KegiatanInput>) {
   return (Object.keys(LABEL) as (keyof KegiatanInput)[])

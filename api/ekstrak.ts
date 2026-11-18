@@ -20,6 +20,8 @@ Ambil data kegiatan dari laporan dan jawab HANYA dengan satu objek JSON berikut:
  "peranOjk": salah satu dari [${daftar(PERAN_OJK)}],
  "tanggal": "YYYY-MM-DD (tanggal mulai)",
  "tanggalSelesai": "YYYY-MM-DD jika kegiatan lebih dari satu hari, selain itu \"\"",
+ "jamMulai": "jam mulai kegiatan, format HH.MM (mis. \"09.30\"), atau \"\"",
+ "jamSelesai": "jam sesi edukasi selesai/ditutup, format HH.MM, atau \"\"",
  "bentuk": salah satu dari [${daftar(BENTUK)}],
  "jenis": salah satu dari [${daftar(JENIS)}] (syariah jika materi keuangan syariah),
  "tempat": "tempat seperti tertulis di laporan",

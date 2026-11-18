@@ -1,5 +1,5 @@
 // Semua panggilan ke server lewat sini. Kode akses disimpan di perangkat dan dikirim di setiap permintaan.
-import type { Kegiatan, KegiatanInput, Riwayat } from '../shared/schema.js';
+import type { Kegiatan, KegiatanInput, Naskah, Riwayat } from '../shared/schema.js';
 import type { Insight } from '../api/insight.js';
 import type { TafsirLaporan } from '../api/laporan.js';
 
@@ -89,6 +89,7 @@ export const api = {
   ekstrak: (b: { nama: string; teks?: string; gambar?: { mime: string; data: string }[] }) => req<{ isian: KegiatanInput; model: string }>('POST', '/api/ekstrak', b),
   insight: (dari: string, sampai: string, buat = false) =>
     req<{ insight: Insight | null }>(buat ? 'POST' : 'GET', `/api/insight?dari=${dari}&sampai=${sampai}`).then((r) => r.insight),
+  naskah: (isian: KegiatanInput) => req<{ naskah: Naskah }>('POST', '/api/naskah', { isian }).then((r) => r.naskah),
   tafsirLaporan: (dari: string, sampai: string, buat = false, kab?: string) =>
     req<{ tafsir: TafsirLaporan | null }>(buat ? 'POST' : 'GET', `/api/laporan?dari=${dari}&sampai=${sampai}${kab ? `&kab=${encodeURIComponent(kab)}` : ''}`).then((r) => r.tafsir),
 };

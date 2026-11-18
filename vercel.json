@@ -17,6 +17,9 @@
     },
     "api/laporan.ts": {
       "maxDuration": 60
+    },
+    "api/naskah.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [

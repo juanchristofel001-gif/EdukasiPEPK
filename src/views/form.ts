@@ -58,6 +58,8 @@ export function formHtml(k: KegiatanInput, opt: { tandaiAi?: boolean } = {}) {
     ${field('Tema / judul materi', `<input name="tema" value="${esc(k.tema)}">`, { lebar: true })}
     ${field('Tanggal', `<input type="date" name="tanggal" value="${esc(k.tanggal)}" required>`, { wajib: true })}
     ${field('Tanggal selesai', `<input type="date" name="tanggalSelesai" value="${esc(k.tanggalSelesai)}">`, { catatan: 'Isi kalau kegiatan lebih dari satu hari.' })}
+    ${field('Jam mulai', `<input name="jamMulai" value="${esc(k.jamMulai || '')}" placeholder="09.30" inputmode="numeric" pattern="\\d{1,2}[.:]\\d{2}">`, { catatan: 'Opsional, untuk laporan Word.' })}
+    ${field('Jam selesai edukasi', `<input name="jamSelesai" value="${esc(k.jamSelesai || '')}" placeholder="10.30" inputmode="numeric" pattern="\\d{1,2}[.:]\\d{2}">`, { catatan: 'Opsional, untuk bagian Penutup.' })}
     ${field('Bentuk kegiatan', pilihan('bentuk', BENTUK, k.bentuk))}
     ${field('Mode', pilihan('mode', MODE, k.mode))}
     ${field('Jenis', pilihan('jenis', JENIS, k.jenis))}
@@ -99,6 +101,8 @@ export function bacaForm(form: HTMLFormElement, dasar: KegiatanInput): KegiatanI
     tema: v('tema'),
     tanggal: v('tanggal'),
     tanggalSelesai: v('tanggalSelesai'),
+    jamMulai: v('jamMulai'),
+    jamSelesai: v('jamSelesai'),
     bentuk: v('bentuk'),
     jenis: v('jenis'),
     mode: v('mode'),

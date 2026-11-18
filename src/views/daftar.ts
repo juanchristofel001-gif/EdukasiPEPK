@@ -6,6 +6,7 @@ import { dataKegiatan, segarkanData } from '../data.js';
 import { esc, $, toast, unduh } from '../ui.js';
 import { formHtml, bacaForm, tampilGalat, pasangForm } from './form.js';
 import { IKON } from '../ikon.js';
+import { kartuLaporanWord, pasangLaporanWord } from './laporan-word.js';
 import { riwayatHtml } from './riwayat.js';
 
 let cari = '';
@@ -114,6 +115,7 @@ export async function viewDetail(el: HTMLElement, id: string) {
     k.dicatatOleh ? ' oleh ' + esc(k.dicatatOleh) : ''
   }${k.diubah !== k.dibuat ? ' · diubah ' + new Date(k.diubah).toLocaleDateString('id-ID', { dateStyle: 'long' }) : ''}</p></header>
   <section class="kartu">${formHtml(k)}<div class="aksi"><button class="btn bahaya" id="hapus">${IKON.sampah}Pindahkan ke sampah</button><button class="btn utama" id="simpan">Simpan perubahan</button></div></section>
+  ${kartuLaporanWord(k)}
   <section class="kartu" id="rwKeg"><div class="ch"><div><h2>Riwayat kegiatan ini</h2><p class="sub">Siapa menambah dan mengubah, kolom apa saja</p></div></div><div class="isi"><div class="memuat"><i></i><i></i><i></i></div></div></section>`;
   api
     .riwayat(k.id)
@@ -121,6 +123,7 @@ export async function viewDetail(el: HTMLElement, id: string) {
     .catch((e) => ($('#rwKeg .isi', el).innerHTML = `<p class="galat">${esc(e.message)}</p>`));
   const form = $<HTMLFormElement>('form', el);
   pasangForm(form);
+  pasangLaporanWord(el, form, k);
   $('#simpan', el).onclick = async (e) => {
     const b = e.currentTarget as HTMLButtonElement;
     const isian = bacaForm(form, k);
