@@ -515,3 +515,23 @@ input.ro { color: var(--mute); }
 .lkb i { display: block; height: 100%; background: var(--biru); border-radius: 0 3px 3px 0; }
 .lkb.cak i { background: var(--h3); }
 .seg button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ---------- Filter kab/kota di dasbor ---------- */
+.petunjuk-filter { margin: -8px 0 14px; font-size: 12.5px; color: var(--mute); }
+.filter-kab { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: -6px 0 16px; padding: 8px 10px 8px 8px; background: var(--birut); border: 1px solid var(--birut2); border-radius: 14px; font-size: 14px; color: var(--ink); }
+.filter-kab > span:nth-child(2) { flex: 1; min-width: 180px; }
+.filter-kab b { color: var(--biru); }
+.fk-ikon { width: 34px; height: 34px; border-radius: 10px; background: #fff; display: grid; place-items: center; flex: none; }
+.fk-ikon svg { width: 28px; height: 28px; }
+.btn.kecil { padding: 7px 12px; font-size: 13px; }
+.peta-svg.ada-pilihan .wil:not(.dipilih) { opacity: 0.28; }
+.peta-svg.ada-pilihan .wil.dipilih { stroke: var(--ink); }
+.peta-svg.ada-pilihan .wil.kec.dipilih { stroke: #fff; }
+.wl li { cursor: pointer; outline: none; }
+.wl li:focus-visible { box-shadow: 0 0 0 2px var(--biru); }
+.wl li.dipilih { background: var(--birut); box-shadow: inset 3px 0 0 var(--biru); }
+.hero-stat .lebar { grid-column: span 2; }
+.bw.polos { padding: 3px 9px; }
+.kontrol-periode { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.sp-meta dd small { font-weight: 500; color: var(--mute); font-size: 12px; }
+@media (max-width: 720px) { .kontrol-periode { align-items: stretch; } .kontrol-periode .seg { overflow-x: auto; } }

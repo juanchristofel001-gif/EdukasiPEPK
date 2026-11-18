@@ -1,6 +1,6 @@
 // Halaman Dasbor: posisi terkini edukasi di Banten, siap dibaca dan disalin saat ada yang bertanya.
 import { KABKOTA, type Kegiatan } from '../../shared/schema.js';
-import { statistik, teksStatus, namaBulan, tanggalPanjang, tanggalPendek, angka, type Periode, type Statistik } from '../../shared/statistik.js';
+import { statistik, teksStatus, labelPeriode, namaBulan, tanggalPanjang, tanggalPendek, angka, type Periode, type Statistik } from '../../shared/statistik.js';
 import { api } from '../api.js';
 import { dataKegiatan } from '../data.js';
 import { esc, $, $$, hariIni, selisihHari, salin, toast } from '../ui.js';
@@ -13,10 +13,19 @@ let pilihan = 'tahun';
 export const pilihanPeriode = () => pilihan;
 let ukuran: Ukuran = 'kegiatan';
 let tingkat: Tingkat = 'kecamatan';
+let pilihKab: string | null = null; // filter kab/kota dari klik peta atau daftar
+let tw = 0; // 0 = setahun penuh, 1–4 = triwulan pada tahun yang dipilih
 
-export function periodeDari(p: string, semua: Kegiatan[]): Periode {
+const tahunDari = (p: string) => (p === 'tahun' ? hariIni().slice(0, 4) : /^\d{4}$/.test(p) ? p : null);
+
+export function periodeDari(p: string, semua: Kegiatan[], triwulan = 0): Periode {
   const h = hariIni();
   const y = h.slice(0, 4);
+  const ty = tahunDari(p);
+  if (ty && triwulan >= 1 && triwulan <= 4) {
+    const akhir = new Date(+ty, triwulan * 3, 0).getDate();
+    return { dari: `${ty}-${String(triwulan * 3 - 2).padStart(2, '0')}-01`, sampai: `${ty}-${String(triwulan * 3).padStart(2, '0')}-${akhir}` };
+  }
   if (p === 'tahun') return { dari: `${y}-01-01`, sampai: `${y}-12-31` };
   if (p === '12bulan') {
     const d = new Date(h + 'T00:00:00');
@@ -29,7 +38,7 @@ export function periodeDari(p: string, semua: Kegiatan[]): Periode {
 }
 
 export async function viewDasbor(el: HTMLElement) {
-  el.innerHTML = `<div class="memuat besar"><i></i><i></i><i></i></div>`;
+  if (!el.firstElementChild) el.innerHTML = `<div class="memuat besar"><i></i><i></i><i></i></div>`;
   let semua: Kegiatan[];
   try {
     semua = await dataKegiatan();
@@ -39,8 +48,19 @@ export async function viewDasbor(el: HTMLElement) {
   }
   const h = hariIni();
   const tahunLain = [...new Set(semua.map((k) => k.tanggal.slice(0, 4)))].filter((y) => y !== h.slice(0, 4)).sort().reverse();
-  const p = periodeDari(pilihan, semua);
-  const s = statistik(semua, p);
+  if (!tahunDari(pilihan)) tw = 0;
+  const p = periodeDari(pilihan, semua, tw);
+  const ty = tahunDari(pilihan);
+  const twOpsi = ty
+    ? [0, 1, 2, 3, 4].map((q) => {
+        const mulai = q ? `${ty}-${String(q * 3 - 2).padStart(2, '0')}-01` : '';
+        return `<button data-tw="${q}" class="${q === tw ? 'on' : ''}"${q && mulai > h ? ' disabled title="Belum berjalan"' : ''}>${q ? 'TW ' + ['I', 'II', 'III', 'IV'][q - 1] : 'Setahun'}</button>`;
+      })
+    : [];
+  if (pilihKab && !(KABKOTA as readonly string[]).includes(pilihKab)) pilihKab = null;
+  const sAll = statistik(semua, p);
+  const daftarF = pilihKab ? semua.filter((k) => k.kabkota === pilihKab) : semua;
+  const s = pilihKab ? statistik(daftarF, p) : sAll;
   const opsi: [string, string][] = [
     ['tahun', 'Tahun ini'],
     ['12bulan', '12 bulan'],
@@ -50,12 +70,20 @@ export async function viewDasbor(el: HTMLElement) {
 
   el.innerHTML = `
   <header class="ph">
-    <div><h1>Dasbor edukasi</h1><p>${tanggalPanjang(p.dari)} – ${tanggalPanjang(p.sampai)}</p></div>
-    <div class="kontrol">
+    <div><h1>Dasbor edukasi</h1><p>${labelPeriode(p)}${/^(Tahun|Triwulan)/.test(labelPeriode(p)) ? ` · ${tanggalPanjang(p.dari)} – ${tanggalPanjang(p.sampai)}` : ''}</p></div>
+    <div class="kontrol kontrol-periode">
       <div class="seg" role="group" aria-label="Periode">${opsi.map(([v, t]) => `<button data-p="${v}" class="${v === pilihan ? 'on' : ''}">${t}</button>`).join('')}</div>
+      ${twOpsi.length ? `<div class="seg kecil" role="group" aria-label="Triwulan">${twOpsi.join('')}</div>` : ''}
     </div>
   </header>
-  ${semua.length ? isi(s, semua, p, h) : kosongHtml()}`;
+  ${
+    pilihKab
+      ? `<div class="filter-kab"><span class="fk-ikon" data-ikon-fk="${esc(pilihKab)}"></span><span>Menampilkan <b>${esc(pilihKab)}</b> saja</span><button class="btn lembut kecil" id="hapusFilter">Tampilkan seluruh Banten</button></div>`
+      : semua.length
+        ? `<p class="petunjuk-filter">Klik kabupaten/kota di peta atau di daftar untuk melihat datanya saja.</p>`
+        : ''
+  }
+  ${semua.length ? isi(s, sAll, daftarF, p, h) : kosongHtml()}`;
 
   $$<HTMLButtonElement>('.seg [data-p]', el).forEach(
     (b) =>
@@ -64,12 +92,21 @@ export async function viewDasbor(el: HTMLElement) {
         viewDasbor(el);
       }),
   );
+  $$<HTMLButtonElement>('.seg [data-tw]', el).forEach(
+    (b) =>
+      (b.onclick = () => {
+        tw = +b.dataset.tw!;
+        viewDasbor(el);
+      }),
+  );
   if (!semua.length) return;
+  const hf = $('#hapusFilter', el);
+  if (hf) hf.onclick = () => pilihFilter(el, null);
   $('#salin', el).onclick = async () => {
-    await salin(teksStatus(s, h));
+    await salin(teksStatus(s, h, pilihKab || undefined));
     toast('Status disalin. Tinggal tempel di WhatsApp atau email.');
   };
-  pasangPeta(el, s);
+  pasangPeta(el, sAll, s);
   pasangInsight(el, p);
 }
 
@@ -77,25 +114,36 @@ function kosongHtml() {
   return `<section class="kartu kosong"><span class="kosong-ikon">${IKON.unggah}</span><h2>Belum ada kegiatan tercatat</h2><p>Mulai dengan mengunggah laporan kegiatan edukasi. AI akan mengisi datanya untuk kamu cek.</p><a class="btn utama" href="#/unggah">Unggah laporan</a></section>`;
 }
 
-function isi(s: Statistik, semua: Kegiatan[], p: Periode, h: string) {
+function isi(s: Statistik, sAll: Statistik, semua: Kegiatan[], p: Periode, h: string) {
   const belum = s.perWilayah.filter((w) => !w.kegiatan);
+  const wk = pilihKab ? s.perWilayah.find((w) => w.nama === pilihKab)! : null;
+  const kecBelum = wk ? s.perKecamatan.filter((c) => c.kab === pilihKab && !c.kegiatan).map((c) => c.nama) : [];
   return `
   <section class="hero">
     <div class="hero-utama">
-      <span class="hero-lbl">Kegiatan edukasi keuangan</span>
+      <span class="hero-lbl">Kegiatan edukasi keuangan${wk ? ` · ${esc(wk.nama)}` : ''}</span>
       <b class="hero-angka">${angka(s.kegiatan)}</b>
       <span class="hero-sub">${s.kegiatan ? `Kegiatan terakhir ${tanggalPanjang(semua.filter((k) => k.tanggal >= p.dari && k.tanggal <= p.sampai)[0].tanggal)}` : 'Belum ada kegiatan di periode ini'}</span>
-      <div class="hero-aksi"><button class="btn putih" id="salin">${IKON.salin}Salin status</button><a class="btn kaca" href="#/laporan?dari=${p.dari}&sampai=${p.sampai}">${IKON.file}Buat laporan PDF</a><a class="btn kaca" href="#/unggah">${IKON.unggah}Unggah laporan</a></div>
+      <div class="hero-aksi"><button class="btn putih" id="salin">${IKON.salin}Salin status</button><a class="btn kaca" href="#/laporan?dari=${p.dari}&sampai=${p.sampai}">${IKON.file}Buat laporan PDF${wk ? ' (seluruh Banten)' : ''}</a><a class="btn kaca" href="#/unggah">${IKON.unggah}Unggah laporan</a></div>
     </div>
     <div class="hero-stat">
       <div><span>${IKON.orang}Peserta</span><b>${s.adaPerkiraan ? '<small>±</small>' : ''}${angka(s.peserta)}</b></div>
-      <div><span>${IKON.peta}Kab/kota terjangkau</span><b>${s.wilayahTerjangkau}<small>/${KABKOTA.length}</small></b></div>
+${
+        wk
+          ? `<div><span>${IKON.pin}Kecamatan terjangkau</span><b>${wk.kecTerjangkau}<small>/${wk.kecTotal}</small></b></div>
+      <div class="lebar"><span>${IKON.target}Kecamatan belum dijangkau (${kecBelum.length})</span>${
+        kecBelum.length
+          ? `<div class="belum">${kecBelum.slice(0, 10).map((n) => `<span class="bw polos">${esc(n)}</span>`).join('')}${kecBelum.length > 10 ? `<span class="bw polos">+${kecBelum.length - 10} lainnya</span>` : ''}</div>`
+          : '<b class="kecil">Semua kecamatan terjangkau</b>'
+      }</div>`
+          : `<div><span>${IKON.peta}Kab/kota terjangkau</span><b>${s.wilayahTerjangkau}<small>/${KABKOTA.length}</small></b></div>
       <div><span>${IKON.pin}Kecamatan terjangkau</span><b>${s.kecamatanTerjangkau}<small>/${JUMLAH_KECAMATAN}</small></b></div>
       <div><span>${IKON.target}Belum dijangkau</span>${
         belum.length
           ? `<div class="belum">${belum.map((w) => `<span class="bw" title="${esc(w.nama)}"><i data-ikon-putih="${esc(w.nama)}"></i>${esc(w.nama.replace('Kabupaten ', 'Kab. ').replace('Kota Tangerang Selatan', 'Tangsel'))}</span>`).join('')}</div>`
           : '<b class="kecil">Semua terjangkau</b>'
-      }</div>
+      }</div>`
+      }
     </div>
   </section>
   <div class="dash">
@@ -110,12 +158,12 @@ function isi(s: Statistik, semua: Kegiatan[], p: Periode, h: string) {
       <div class="tip" id="tip" hidden></div>
     </section>
     <section class="kartu sp4">
-      <div class="ch"><div><h2>Per kabupaten/kota</h2><p class="sub">Urut dari kegiatan terbanyak</p></div></div>
-      ${wilayahHtml(s, h)}
+      <div class="ch"><div><h2>Per kabupaten/kota</h2><p class="sub">Klik untuk menyaring dasbor</p></div></div>
+      ${wilayahHtml(sAll, h)}
     </section>
     <section class="kartu sp7"><div class="ch"><div><h2>Tren bulanan</h2><p class="sub">Jumlah kegiatan per bulan</p></div></div>${trenHtml(s)}</section>
-    <section class="kartu sp5" id="insight"><div class="ch"><div><h2>Insight AI</h2><p class="sub">Tafsiran dari angka di halaman ini</p></div></div><div class="ins-isi"><div class="memuat"><i></i><i></i><i></i></div></div></section>
-    <section class="kartu sp4" id="kecTop"><div class="ch"><div><h2>Kecamatan teratas</h2><p class="sub">${s.kecamatanTerjangkau} dari ${JUMLAH_KECAMATAN} kecamatan sudah dijangkau</p></div></div>${batang(
+    <section class="kartu sp5" id="insight"><div class="ch"><div><h2>Insight AI</h2><p class="sub">${wk ? 'Untuk seluruh Banten, belum mengikuti filter kab/kota' : 'Tafsiran dari angka di halaman ini'}</p></div></div><div class="ins-isi"><div class="memuat"><i></i><i></i><i></i></div></div></section>
+    <section class="kartu sp4" id="kecTop"><div class="ch"><div><h2>Kecamatan teratas</h2><p class="sub">${wk ? `${wk.kecTerjangkau} dari ${wk.kecTotal} kecamatan di ${esc(wk.nama.replace('Kabupaten ', 'Kab. '))}` : `${s.kecamatanTerjangkau} dari ${JUMLAH_KECAMATAN} kecamatan`} sudah dijangkau</p></div></div>${batang(
       s.perKecamatan
         .filter((c) => c.kegiatan)
         .sort((a, b) => b.kegiatan - a.kegiatan || b.peserta - a.peserta)
@@ -137,7 +185,7 @@ function wilayahHtml(s: Statistik, h: string) {
       const ket = !w.kegiatan
         ? '<span class="tag merah">Belum ada kegiatan</span>'
         : `<span class="kapan${lama! > 90 ? ' lama' : ''}" title="Kegiatan terakhir${lama! > 0 ? `, ${lama} hari lalu` : ''}">${tanggalPendek(w.terakhir!)}</span>`;
-      return `<li class="${w.kegiatan ? '' : 'nol'}" data-nama="${esc(w.nama)}"><span class="wl-ikon" data-ikon="${esc(w.nama)}"></span><div class="wl-k"><span class="wn">${w.nama.replace('Kabupaten ', 'Kab. ')}</span>${ket}</div><div class="wl-n"><b>${w.kegiatan}</b><span>${angka(w.peserta)} peserta</span><span>${w.kecTerjangkau}/${w.kecTotal} kecamatan</span><span>${desimal(w.per100rb)} per 100 rb penduduk</span></div></li>`;
+      return `<li class="${w.kegiatan ? '' : 'nol'}${pilihKab === w.nama ? ' dipilih' : ''}" data-nama="${esc(w.nama)}" tabindex="0" role="button" aria-pressed="${pilihKab === w.nama}"><span class="wl-ikon" data-ikon="${esc(w.nama)}"></span><div class="wl-k"><span class="wn">${w.nama.replace('Kabupaten ', 'Kab. ')}</span>${ket}</div><div class="wl-n"><b>${w.kegiatan}</b><span>${angka(w.peserta)} peserta</span><span>${w.kecTerjangkau}/${w.kecTotal} kecamatan</span><span>${desimal(w.per100rb)} per 100 rb penduduk</span></div></li>`;
     })
     .join('')}</ol>`;
 }
@@ -183,7 +231,7 @@ function terbaru(semua: Kegiatan[], p: Periode) {
     .join('')}</ul>`;
 }
 
-async function pasangPeta(el: HTMLElement, s: Statistik) {
+async function pasangPeta(el: HTMLElement, s: Statistik, sF: Statistik) {
   const box = $('#peta', el),
     tip = $('#tip', el),
     leg = $('#legenda', el),
@@ -197,6 +245,7 @@ async function pasangPeta(el: HTMLElement, s: Statistik) {
   }
   const maksKab = Math.max(0, ...s.perWilayah.map((w) => w.kegiatan));
   const maksKec = Math.max(0, ...s.perKecamatan.map((c) => c.kegiatan));
+  $$('[data-ikon-fk]', el).forEach((i) => (i.innerHTML = ikonWilayah(wil, i.dataset.ikonFk!, 3)));
   $$('#kecTop .hb li', el).forEach((li) => {
     const c = s.perKecamatan.find((x) => x.kab + '|' + x.nama === li.dataset.k);
     $('.hi', li).innerHTML = ikonWilayah(wil, li.dataset.k!, kelas(c?.kegiatan || 0, maksKec));
@@ -212,6 +261,12 @@ async function pasangPeta(el: HTMLElement, s: Statistik) {
     const tk: Tingkat = rasio ? 'kabkota' : tingkat; // data penduduk baru tersedia per kab/kota
     const r = petaSvg(wil, s, ukuran, box.clientWidth < 520, tk);
     box.innerHTML = r.svg;
+    const svg = box.querySelector('svg')!;
+    if (pilihKab) {
+      svg.classList.add('ada-pilihan');
+      $$('.wil', box).forEach((w) => w.classList.toggle('dipilih', w.dataset.nama!.split('|')[0] === pilihKab));
+    }
+    $$('.wil', box).forEach((w) => w.setAttribute('tabindex', '0'));
     $$<HTMLButtonElement>('[data-t]', kartu).forEach((b) => {
       b.disabled = rasio && b.dataset.t === 'kecamatan';
       b.classList.toggle('on', b.dataset.t === tk);
@@ -224,7 +279,8 @@ async function pasangPeta(el: HTMLElement, s: Statistik) {
     $('.sub', kartu).textContent = rasio
       ? `Jumlah kegiatan dibandingkan jumlah penduduk (BPS, ${TAHUN_PENDUDUK}); hanya tingkat kab/kota`
       : `Makin gelap, makin banyak ${LABEL_UKURAN[ukuran]}` +
-        (tk === 'kecamatan' && s.tanpaKecamatan ? ` · ${s.tanpaKecamatan} kegiatan belum punya kecamatan dan hanya terhitung di tingkat kab/kota` : '');
+        (tk === 'kecamatan' && sF.tanpaKecamatan ? ` · ${sF.tanpaKecamatan} kegiatan belum punya kecamatan dan hanya terhitung di tingkat kab/kota` : '');
+    $('.sub', kartu).textContent += ' · Klik wilayah untuk menyaring';
   };
   gambar();
   $$<HTMLButtonElement>('[data-t]', kartu).forEach(
@@ -267,6 +323,16 @@ async function pasangPeta(el: HTMLElement, s: Statistik) {
     else sembunyi();
   });
   box.addEventListener('pointerleave', sembunyi);
+  const klikWil = (t: EventTarget | null) => {
+    const p = (t as Element | null)?.closest<SVGPathElement>('.wil');
+    if (!p) return;
+    const kab = p.dataset.nama!.split('|')[0];
+    pilihFilter(el, pilihKab === kab ? null : kab);
+  };
+  box.addEventListener('click', (e) => klikWil(e.target));
+  box.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') (e.preventDefault(), klikWil(e.target));
+  });
   box.addEventListener('focusin', (e) => {
     const p = (e.target as Element).closest<SVGPathElement>('.wil');
     if (!p) return;
@@ -281,6 +347,11 @@ async function pasangPeta(el: HTMLElement, s: Statistik) {
       li.classList.add('aktif');
     });
     li.addEventListener('pointerleave', () => sorot(null));
+    const pilih = () => pilihFilter(el, pilihKab === li.dataset.nama ? null : li.dataset.nama!);
+    li.addEventListener('click', pilih);
+    li.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') (e.preventDefault(), pilih());
+    });
   });
 }
 
@@ -313,4 +384,11 @@ async function pasangInsight(el: HTMLElement, p: Periode) {
   } catch (e: any) {
     gambar(null, e.message);
   }
+}
+
+// Ganti filter kab/kota tanpa melompat ke atas halaman.
+function pilihFilter(el: HTMLElement, kab: string | null) {
+  pilihKab = kab;
+  const y = window.scrollY;
+  viewDasbor(el).then(() => window.scrollTo(0, y));
 }

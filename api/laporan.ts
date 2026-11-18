@@ -8,6 +8,7 @@ import { db, aktif, DbError } from './_lib/db.js';
 import { generateJson, GeminiError } from './_lib/gemini.js';
 import { isTanggal } from '../shared/schema.js';
 import { dataLaporan, deskripsi, bahanAi, BAGIAN, type Bagian } from '../shared/laporan.js';
+import { labelPeriode } from '../shared/statistik.js';
 
 export type TafsirLaporan = {
   dibuat: string;
@@ -34,7 +35,7 @@ export default async function handler(req: Req, res: Res) {
     if (!d.kegiatan) return fail(res, 400, 'Belum ada kegiatan di periode ini.');
     const desk = deskripsi(d);
     const prompt = `Kamu analis program edukasi keuangan OJK Provinsi Banten dan sedang menulis laporan untuk pimpinan.
-Data rekap kegiatan periode ${dari} s.d. ${sampai} (JSON):
+Data rekap kegiatan periode ${labelPeriode({ dari, sampai })} (${dari} s.d. ${sampai}) (JSON):
 ${JSON.stringify(bahanAi(d))}
 
 Laporan berisi grafik berikut, masing-masing sudah punya DESKRIPSI angka (jangan diulang mentah-mentah):

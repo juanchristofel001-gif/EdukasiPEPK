@@ -100,21 +100,43 @@ export const tanggalPanjang = (d: string) => `${+d.slice(8, 10)} ${BULAN[+d.slic
 export const tanggalPendek = (d: string) => `${+d.slice(8, 10)} ${BULAN[+d.slice(5, 7) - 1].slice(0, 3)} ${d.slice(0, 4)}`;
 export const angka = (n: number) => n.toLocaleString('id-ID');
 
+// Nama periode yang mudah dibaca: "Triwulan III 2026", "Tahun 2026", atau rentang tanggal.
+export function labelPeriode(p: Periode) {
+  const y = p.dari.slice(0, 4);
+  if (p.dari === `${y}-01-01` && p.sampai === `${y}-12-31`) return `Tahun ${y}`;
+  const m = +p.dari.slice(5, 7);
+  if (p.dari.endsWith('-01') && (m - 1) % 3 === 0 && p.sampai.slice(0, 4) === y) {
+    const q = (m + 2) / 3;
+    const akhir = new Date(+y, q * 3, 0).getDate();
+    if (p.sampai === `${y}-${String(q * 3).padStart(2, '0')}-${akhir}`) return `Triwulan ${['I', 'II', 'III', 'IV'][q - 1]} ${y}`;
+  }
+  return `${tanggalPanjang(p.dari)} – ${tanggalPanjang(p.sampai)}`;
+}
+
 // Teks status singkat yang siap ditempel ke WhatsApp/email saat ada yang bertanya "sudah berapa?".
-export function teksStatus(s: Statistik, hariIni: string) {
+export function teksStatus(s: Statistik, hariIni: string, kab?: string) {
   const belum = s.perWilayah.filter((w) => !w.kegiatan).map((w) => w.nama);
   const atas = s.perWilayah.filter((w) => w.kegiatan).sort((a, b) => b.kegiatan - a.kegiatan).slice(0, 3);
+  const wk = kab ? s.perWilayah.find((w) => w.nama === kab) : undefined;
   const baris = [
-    `Status edukasi keuangan OJK Provinsi Banten`,
-    `Periode ${tanggalPanjang(s.periode.dari)} s.d. ${tanggalPanjang(s.periode.sampai)} (data per ${tanggalPanjang(hariIni)})`,
+    `Status edukasi keuangan OJK Provinsi Banten${wk ? ` – ${wk.nama}` : ''}`,
+    `Periode ${/^(Tahun|Triwulan)/.test(labelPeriode(s.periode)) ? labelPeriode(s.periode) + ', ' : ''}${tanggalPanjang(s.periode.dari)} s.d. ${tanggalPanjang(s.periode.sampai)} (data per ${tanggalPanjang(hariIni)})`,
     ``,
     `• Kegiatan: ${angka(s.kegiatan)}`,
     `• Peserta: ${s.adaPerkiraan ? '±' : ''}${angka(s.peserta)} orang`,
-    `• Wilayah terjangkau: ${s.wilayahTerjangkau} dari ${KABKOTA.length} kabupaten/kota`,
   ];
-  baris.push(`• Kecamatan terjangkau: ${s.kecamatanTerjangkau} dari ${JUMLAH_KECAMATAN} kecamatan`);
-  if (atas.length) baris.push(`• Terbanyak: ${atas.map((w) => `${w.nama} (${w.kegiatan})`).join(', ')}`);
-  if (belum.length) baris.push(`• Belum ada kegiatan: ${belum.join(', ')}`);
+  if (wk) {
+    const kec = s.perKecamatan.filter((c) => c.kab === wk.nama);
+    const top = kec.filter((c) => c.kegiatan).sort((a, b) => b.kegiatan - a.kegiatan).slice(0, 3);
+    baris.push(`• Kecamatan terjangkau: ${wk.kecTerjangkau} dari ${wk.kecTotal} kecamatan`);
+    if (top.length) baris.push(`• Terbanyak: ${top.map((c) => `${c.nama} (${c.kegiatan})`).join(', ')}`);
+    if (s.tanpaKecamatan) baris.push(`• ${s.tanpaKecamatan} kegiatan belum dicatat kecamatannya`);
+  } else {
+    baris.push(`• Wilayah terjangkau: ${s.wilayahTerjangkau} dari ${KABKOTA.length} kabupaten/kota`);
+    baris.push(`• Kecamatan terjangkau: ${s.kecamatanTerjangkau} dari ${JUMLAH_KECAMATAN} kecamatan`);
+    if (atas.length) baris.push(`• Terbanyak: ${atas.map((w) => `${w.nama} (${w.kegiatan})`).join(', ')}`);
+    if (belum.length) baris.push(`• Belum ada kegiatan: ${belum.join(', ')}`);
+  }
   if (s.sasaran.length) baris.push(`• Sasaran utama: ${s.sasaran.slice(0, 3).map(([n, c]) => `${n} (${c})`).join(', ')}`);
   return baris.join('\n');
 }

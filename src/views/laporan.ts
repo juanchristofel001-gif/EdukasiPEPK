@@ -2,7 +2,7 @@
 // interpretasi AI, rekomendasi). Bisa dibaca di layar lalu diunduh sebagai PDF A4.
 import { KABKOTA, type Kegiatan } from '../../shared/schema.js';
 import { JUMLAH_KECAMATAN } from '../../shared/kecamatan.js';
-import { tanggalPanjang, tanggalPendek, angka, type Periode } from '../../shared/statistik.js';
+import { tanggalPanjang, tanggalPendek, angka, labelPeriode, type Periode } from '../../shared/statistik.js';
 import { dataLaporan, deskripsi, BAGIAN, type Bagian, type DataLaporan } from '../../shared/laporan.js';
 import type { TafsirLaporan } from '../../api/laporan.js';
 import { api, nama } from '../api.js';
@@ -38,7 +38,7 @@ export async function viewLaporan(el: HTMLElement, q: URLSearchParams) {
 
   el.innerHTML = `
   <header class="ph lap-ph">
-    <div><a class="lnk kembali" href="#/dasbor">← Dasbor</a><h1>Laporan edukasi</h1><p>${tanggalPanjang(dari)} – ${tanggalPanjang(sampai)} · ${d.kegiatan} kegiatan</p></div>
+    <div><a class="lnk kembali" href="#/dasbor">← Dasbor</a><h1>Laporan edukasi</h1><p>${labelPeriode(p)} · ${d.kegiatan} kegiatan</p></div>
     <div class="kontrol"><button class="btn lembut" id="tulisUlang" hidden>${IKON.kilau}Tulis ulang interpretasi</button><button class="btn utama" id="unduhPdf"${d.kegiatan ? '' : ' disabled'}>${IKON.unduh}Unduh PDF</button></div>
   </header>
   <p class="lap-status" id="lapStatus" hidden></p>
@@ -116,7 +116,7 @@ function dokumen(d: DataLaporan, desk: Record<Bagian, string>, geo: Geo, p: Peri
     <div class="sp-atas"><img src="/logo-ojk.png" alt="Otoritas Jasa Keuangan" width="325" height="128"><span class="sp-merek"><span class="logo">${LOGO}</span><b>${NAMA}</b></span></div>
     <p class="sp-kicau">Laporan kegiatan edukasi keuangan</p>
     <h1>Edukasi Literasi Keuangan<br>OJK Provinsi Banten</h1>
-    <dl class="sp-meta"><div><dt>Periode</dt><dd>${tanggalPanjang(p.dari)} – ${tanggalPanjang(p.sampai)}</dd></div><div><dt>Dibuat</dt><dd>${tanggalPanjang(hariIni())}, ${String(dibuat.getHours()).padStart(2, '0')}.${String(dibuat.getMinutes()).padStart(2, '0')}</dd></div><div><dt>Oleh</dt><dd>${esc(nama.get())}</dd></div></dl>
+    <dl class="sp-meta"><div><dt>Periode</dt><dd>${/^(Tahun|Triwulan)/.test(labelPeriode(p)) ? `${labelPeriode(p)}<br><small>${tanggalPanjang(p.dari)} – ${tanggalPanjang(p.sampai)}</small>` : labelPeriode(p)}</dd></div><div><dt>Dibuat</dt><dd>${tanggalPanjang(hariIni())}, ${String(dibuat.getHours()).padStart(2, '0')}.${String(dibuat.getMinutes()).padStart(2, '0')}</dd></div><div><dt>Oleh</dt><dd>${esc(nama.get())}</dd></div></dl>
   </section>`);
   blok.push(`<section class="lb lap-teks"><h2>Ringkasan</h2><div class="ai-slot" id="aiRingkasan"><p class="lap-catat">AI sedang menulis ringkasan…</p></div></section>`);
   blok.push(`<section class="lb"><div class="lap-kpi">
@@ -264,10 +264,10 @@ async function unduhPdf(el: HTMLElement, b: HTMLButtonElement, p: Periode) {
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setTextColor(150, 146, 155);
-      doc.text(`SiPEDULIKU · Laporan edukasi ${tanggalPendek(p.dari)} – ${tanggalPendek(p.sampai)}`, M, 289);
+      doc.text(`SiPEDULIKU · Laporan edukasi ${/^(Tahun|Triwulan)/.test(labelPeriode(p)) ? labelPeriode(p) : `${tanggalPendek(p.dari)} – ${tanggalPendek(p.sampai)}`}`, M, 289);
       doc.text(`Halaman ${i - 1} dari ${n - 1}`, 210 - M, 289, { align: 'right' });
     }
-    doc.save(`sipeduliku-laporan-${p.dari}-sd-${p.sampai}.pdf`);
+    doc.save(`sipeduliku-laporan-${/^Triwulan/.test(labelPeriode(p)) ? labelPeriode(p).toLowerCase().replace(/\s+/g, '-') : `${p.dari}-sd-${p.sampai}`}.pdf`);
     toast('PDF laporan diunduh.');
   } catch (e: any) {
     toast('Gagal membuat PDF: ' + (e?.message || e), 'galat');
