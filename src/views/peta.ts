@@ -23,7 +23,19 @@ export const muatPeta = () =>
 export const SKALA = ['#f5b4c0', '#ea7b8f', '#d9415c', '#c8102e', '#8a0a20'];
 export const KOSONG = '#ecebf0';
 
-export type Ukuran = 'kegiatan' | 'peserta';
+export type Ukuran = 'kegiatan' | 'peserta' | 'penduduk';
+// 'penduduk' = kegiatan per 100 ribu penduduk (hanya tingkat kab/kota; data penduduk per kecamatan belum ada).
+export const LABEL_UKURAN: Record<Ukuran, string> = { kegiatan: 'kegiatan', peserta: 'peserta', penduduk: 'kegiatan per 100 rb penduduk' };
+
+// Kelas warna untuk nilai pecahan (rasio): dibagi rata dari 0 sampai nilai tertinggi.
+export function kelasRasio(nilai: number, maks: number) {
+  if (!nilai || !maks) return -1;
+  return Math.min(SKALA.length - 1, Math.floor((nilai / maks) * SKALA.length - 1e-9));
+}
+export function legendaRasio(maks: number): string[] {
+  const f = (n: number) => n.toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return SKALA.map((_, i) => (i === 0 ? `≤ ${f(maks / SKALA.length)}` : `${f((maks * i) / SKALA.length)}–${f((maks * (i + 1)) / SKALA.length)}`));
+}
 
 // Kelas warna untuk satu nilai. Selama nilai maksimum masih kecil (≤ 5), warna diambil dari
 // ujung yang tua supaya 1 kegiatan pun jelas terlihat (1 dari 1 = merah OJK, bukan merah muda).
@@ -133,15 +145,18 @@ export function petaSvg(g: Geo, s: Statistik, ukuran: Ukuran, sempit = false, ti
   const Y = (p: Titik) => PAD.t + (y1 - p[1]) * sc;
 
   const data = new Map(s.perWilayah.map((w) => [w.nama, w]));
-  const nilai = (n: string) => (ukuran === 'kegiatan' ? data.get(n)?.kegiatan : data.get(n)?.peserta) || 0;
-  const maks = Math.max(0, ...s.perWilayah.map((w) => (ukuran === 'kegiatan' ? w.kegiatan : w.peserta)));
+  const ambil = (w: Statistik['perWilayah'][number] | undefined) => (ukuran === 'kegiatan' ? w?.kegiatan : ukuran === 'peserta' ? w?.peserta : w?.per100rb) || 0;
+  const nilai = (n: string) => ambil(data.get(n));
+  const maks = Math.max(0, ...s.perWilayah.map((w) => ambil(w)));
+  const kls = (v: number) => (ukuran === 'penduduk' ? kelasRasio(v, maks) : kelas(v, maks));
+  const tulis = (v: number) => (ukuran === 'penduduk' ? v.toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) : angka(v));
 
   const path = (pol: Titik[][][]) => pol.map((pl) => pl.map((ring) => 'M' + ring.map((p) => `${X(p).toFixed(1)},${Y(p).toFixed(1)}`).join('L') + 'Z').join('')).join('');
   const kecData = new Map(s.perKecamatan.map((c) => [c.kab + '|' + c.nama, c]));
   if (tingkat === 'kecamatan') {
     const nk = (c: Kec) => {
       const d = kecData.get(c.kab + '|' + c.nama);
-      return (ukuran === 'kegiatan' ? d?.kegiatan : d?.peserta) || 0;
+      return (ukuran === 'peserta' ? d?.peserta : d?.kegiatan) || 0;
     };
     const mk = Math.max(0, ...g.kecamatan.map(nk));
     const isi = g.kecamatan
@@ -171,8 +186,8 @@ export function petaSvg(g: Geo, s: Statistik, ukuran: Ukuran, sempit = false, ti
     .map((w) => {
       const d = w.poligon.map((pl) => pl.map((ring) => 'M' + ring.map((p) => `${X(p).toFixed(1)},${Y(p).toFixed(1)}`).join('L') + 'Z').join('')).join('');
       const v = nilai(w.nama);
-      const ki = kelas(v, maks);
-      return `<path class="wil" data-nama="${esc(w.nama)}" d="${d}" fill="${ki < 0 ? KOSONG : SKALA[ki]}" tabindex="0" role="img" aria-label="${esc(w.nama)}: ${angka(v)} ${ukuran}"/>`;
+      const ki = kls(v);
+      return `<path class="wil" data-nama="${esc(w.nama)}" d="${d}" fill="${ki < 0 ? KOSONG : SKALA[ki]}" tabindex="0" role="img" aria-label="${esc(w.nama)}: ${tulis(v)} ${ukuran}"/>`;
     })
     .join('');
 
@@ -183,13 +198,13 @@ export function petaSvg(g: Geo, s: Statistik, ukuran: Ukuran, sempit = false, ti
       const cx = X(t),
         cy = Y(t);
       const v = nilai(w.nama);
-      const ki = kelas(v, maks);
+      const ki = kls(v);
       const gelap = ki >= 3;
       const luar = LABEL_LUAR[w.nama];
       if (!luar) {
         if (sempit && (w.nama === 'Kabupaten Serang' || w.nama === 'Kabupaten Tangerang'))
-          return `<g class="pl${gelap ? ' gelap' : ''}" pointer-events="none"><text x="${cx.toFixed(1)}" y="${(cy + 8).toFixed(1)}" class="lv">${angka(v)}</text></g>`;
-        return `<g class="pl${gelap ? ' gelap' : ''}" pointer-events="none"><text x="${cx.toFixed(1)}" y="${(cy - 4).toFixed(1)}" class="ln">${SINGKAT[w.nama]}</text><text x="${cx.toFixed(1)}" y="${(cy + 13).toFixed(1)}" class="lv">${angka(v)}</text></g>`;
+          return `<g class="pl${gelap ? ' gelap' : ''}" pointer-events="none"><text x="${cx.toFixed(1)}" y="${(cy + 8).toFixed(1)}" class="lv">${tulis(v)}</text></g>`;
+        return `<g class="pl${gelap ? ' gelap' : ''}" pointer-events="none"><text x="${cx.toFixed(1)}" y="${(cy - 4).toFixed(1)}" class="ln">${SINGKAT[w.nama]}</text><text x="${cx.toFixed(1)}" y="${(cy + 13).toFixed(1)}" class="lv">${tulis(v)}</text></g>`;
       }
       const [dx0, dy0, anchor] = luar;
       const f = sempit ? 1.45 : 1;
@@ -197,7 +212,7 @@ export function petaSvg(g: Geo, s: Statistik, ukuran: Ukuran, sempit = false, ti
         dy = dy0 * f;
       const lx = cx + dx,
         ly = cy + dy;
-      return `<g class="pl luar" pointer-events="none"><path d="M${cx.toFixed(1)},${cy.toFixed(1)}L${lx.toFixed(1)},${(ly + 4).toFixed(1)}"/><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="2.2"/><text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anchor}" class="ln">${SINGKAT[w.nama]} <tspan class="lv">${angka(v)}</tspan></text></g>`;
+      return `<g class="pl luar" pointer-events="none"><path d="M${cx.toFixed(1)},${cy.toFixed(1)}L${lx.toFixed(1)},${(ly + 4).toFixed(1)}"/><circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="2.2"/><text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="${anchor}" class="ln">${SINGKAT[w.nama]} <tspan class="lv">${tulis(v)}</tspan></text></g>`;
     })
     .join('');
 
@@ -214,7 +229,7 @@ export function tooltipHtml(nama: string, s: Statistik) {
   }
   const w = s.perWilayah.find((x) => x.nama === nama);
   if (!w) return `<b>${esc(nama)}</b>`;
-  return `<b>${esc(nama)}</b><span>${w.kegiatan} kegiatan · ${angka(w.peserta)} peserta</span><span>${w.kecTerjangkau} dari ${w.kecTotal} kecamatan terjangkau</span><span>${
+  return `<b>${esc(nama)}</b><span>${w.kegiatan} kegiatan · ${angka(w.peserta)} peserta</span><span>${w.per100rb.toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kegiatan per 100 rb penduduk</span><span>${w.kecTerjangkau} dari ${w.kecTotal} kecamatan terjangkau</span><span>${
     w.terakhir ? 'Terakhir ' + tanggalPendek(w.terakhir) : 'Belum ada kegiatan'
   }</span>`;
 }

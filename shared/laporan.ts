@@ -4,6 +4,7 @@
 import { KABKOTA, type Kegiatan } from './schema.js';
 import { JUMLAH_KECAMATAN } from './kecamatan.js';
 import { statistik, dalamPeriode, namaBulan, tanggalPanjang, angka, type Periode, type Statistik } from './statistik.js';
+import { desimal, TAHUN_PENDUDUK } from './penduduk.js';
 
 export const BAGIAN = [
   ['peta', 'Sebaran kecamatan'],
@@ -98,6 +99,11 @@ export function deskripsi(d: DataLaporan): Record<Bagian, string> {
       `Kegiatan menjangkau ${d.wilayahTerjangkau} dari ${KABKOTA.length} kabupaten/kota.` +
       (ada.length ? ` Terbanyak di ${daftar(ada.slice(0, 3).map((w) => `${w.nama} (${w.kegiatan} kegiatan, ${angka(w.peserta)} peserta)`))}.` : '') +
       (belum.length ? ` Belum ada kegiatan di ${daftar(belum.map((w) => w.nama))}.` : '') +
+      (ada.length ? (() => {
+        const r = [...d.perWilayah].sort((a, b) => b.per100rb - a.per100rb);
+        const hi = r[0], lo = r[r.length - 1];
+        return ` Dibandingkan jumlah penduduk (${TAHUN_PENDUDUK}), kegiatan paling rapat di ${hi.nama} (${desimal(hi.per100rb)} per 100 ribu penduduk) dan paling jarang di ${lo.nama} (${desimal(lo.per100rb)}).`;
+      })() : '') +
       (ada.length ? ` Cakupan kecamatan tertinggi di ${(() => {
         const w = [...ada].sort((a, b) => b.kecTerjangkau / b.kecTotal - a.kecTerjangkau / a.kecTotal)[0];
         return `${w.nama} (${w.kecTerjangkau} dari ${w.kecTotal} kecamatan)`;
@@ -140,7 +146,7 @@ export function bahanAi(d: DataLaporan) {
     kabkotaTerjangkau: `${d.wilayahTerjangkau}/${KABKOTA.length}`,
     kecamatanTerjangkau: `${d.kecamatanTerjangkau}/${JUMLAH_KECAMATAN}`,
     kegiatanTanpaKecamatan: d.tanpaKecamatan,
-    perWilayah: d.perWilayah.map((w) => ({ nama: w.nama, kegiatan: w.kegiatan, peserta: w.peserta, kecamatan: `${w.kecTerjangkau}/${w.kecTotal}` })),
+    perWilayah: d.perWilayah.map((w) => ({ nama: w.nama, kegiatan: w.kegiatan, peserta: w.peserta, kecamatan: `${w.kecTerjangkau}/${w.kecTotal}`, penduduk: w.penduduk, kegiatanPer100rbPenduduk: w.per100rb })),
     kecamatanTeratas: d.perKecamatan.filter((c) => c.kegiatan).sort((a, b) => b.kegiatan - a.kegiatan).slice(0, 10).map((c) => `${c.nama}, ${c.kab}: ${c.kegiatan}`),
     perBulan: d.perBulan,
     kelasPeserta: d.kelasPeserta,

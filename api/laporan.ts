@@ -51,6 +51,8 @@ Aturan:
 - Hanya pakai angka yang ada di data. Jangan mengarang penyebab sebagai fakta; kalau menduga, tulis "kemungkinan".
 - Kalau segelintir kegiatan (mis. siaran radio/daring atau acara massal) menyumbang porsi besar peserta,
   sebutkan bahwa total peserta perlu dibaca hati-hati karena angka tersebut kemungkinan perkiraan jangkauan.
+- Saat menilai pemerataan antarwilayah, pakai juga kegiatanPer100rbPenduduk: wilayah berpenduduk besar bisa
+  tampak banyak kegiatannya tetapi rendah bila dibandingkan jumlah penduduknya.
 - Kalau banyak kegiatan belum punya kecamatan, sebutkan bahwa cakupan kecamatan sebenarnya bisa lebih tinggi.
 - Jika peserta ditandai perkiraan, gunakan kata "sekitar".`;
     let out: any, model: string;

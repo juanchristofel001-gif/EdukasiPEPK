@@ -4,7 +4,8 @@ import { statistik, teksStatus, namaBulan, tanggalPanjang, tanggalPendek, angka,
 import { api } from '../api.js';
 import { dataKegiatan } from '../data.js';
 import { esc, $, $$, hariIni, selisihHari, salin, toast } from '../ui.js';
-import { muatPeta, petaSvg, tooltipHtml, batasLegenda, kelas, ikonWilayah, SKALA, KOSONG, type Ukuran, type Tingkat } from './peta.js';
+import { muatPeta, petaSvg, tooltipHtml, batasLegenda, kelas, legendaRasio, ikonWilayah, SKALA, KOSONG, LABEL_UKURAN, type Ukuran, type Tingkat } from './peta.js';
+import { TAHUN_PENDUDUK, desimal } from '../../shared/penduduk.js';
 import { JUMLAH_KECAMATAN } from '../../shared/kecamatan.js';
 import { IKON, ikonPilihan } from '../ikon.js';
 
@@ -99,10 +100,10 @@ function isi(s: Statistik, semua: Kegiatan[], p: Periode, h: string) {
   </section>
   <div class="dash">
     <section class="kartu sp8 peta-kartu">
-      <div class="ch"><div><h2>Peta sebaran</h2><p class="sub">Makin gelap, makin banyak ${ukuran}</p></div>
+      <div class="ch"><div><h2>Peta sebaran</h2><p class="sub"></p></div>
         <div class="peta-kontrol">
           <div class="seg kecil" role="group" aria-label="Tingkat wilayah"><button data-t="kecamatan" class="${tingkat === 'kecamatan' ? 'on' : ''}">Kecamatan</button><button data-t="kabkota" class="${tingkat === 'kabkota' ? 'on' : ''}">Kab/kota</button></div>
-          <div class="seg kecil" role="group" aria-label="Ukuran peta"><button data-u="kegiatan" class="${ukuran === 'kegiatan' ? 'on' : ''}">Kegiatan</button><button data-u="peserta" class="${ukuran === 'peserta' ? 'on' : ''}">Peserta</button></div>
+          <div class="seg kecil" role="group" aria-label="Ukuran peta"><button data-u="kegiatan" class="${ukuran === 'kegiatan' ? 'on' : ''}">Kegiatan</button><button data-u="peserta" class="${ukuran === 'peserta' ? 'on' : ''}">Peserta</button><button data-u="penduduk" class="${ukuran === 'penduduk' ? 'on' : ''}" title="Kegiatan per 100 ribu penduduk">Per penduduk</button></div>
         </div></div>
       <div class="peta" id="peta"><div class="memuat besar"><i></i><i></i><i></i></div></div>
       <div class="legenda" id="legenda"></div>
@@ -136,7 +137,7 @@ function wilayahHtml(s: Statistik, h: string) {
       const ket = !w.kegiatan
         ? '<span class="tag merah">Belum ada kegiatan</span>'
         : `<span class="kapan${lama! > 90 ? ' lama' : ''}" title="Kegiatan terakhir${lama! > 0 ? `, ${lama} hari lalu` : ''}">${tanggalPendek(w.terakhir!)}</span>`;
-      return `<li class="${w.kegiatan ? '' : 'nol'}" data-nama="${esc(w.nama)}"><span class="wl-ikon" data-ikon="${esc(w.nama)}"></span><div class="wl-k"><span class="wn">${w.nama.replace('Kabupaten ', 'Kab. ')}</span>${ket}</div><div class="wl-n"><b>${w.kegiatan}</b><span>${angka(w.peserta)} peserta</span><span>${w.kecTerjangkau}/${w.kecTotal} kecamatan</span></div></li>`;
+      return `<li class="${w.kegiatan ? '' : 'nol'}" data-nama="${esc(w.nama)}"><span class="wl-ikon" data-ikon="${esc(w.nama)}"></span><div class="wl-k"><span class="wn">${w.nama.replace('Kabupaten ', 'Kab. ')}</span>${ket}</div><div class="wl-n"><b>${w.kegiatan}</b><span>${angka(w.peserta)} peserta</span><span>${w.kecTerjangkau}/${w.kecTotal} kecamatan</span><span>${desimal(w.per100rb)} per 100 rb penduduk</span></div></li>`;
     })
     .join('')}</ol>`;
 }
@@ -207,16 +208,23 @@ async function pasangPeta(el: HTMLElement, s: Statistik) {
   });
   const gambar = () => {
     if (!box.isConnected) return;
-    const r = petaSvg(wil, s, ukuran, box.clientWidth < 520, tingkat);
+    const rasio = ukuran === 'penduduk';
+    const tk: Tingkat = rasio ? 'kabkota' : tingkat; // data penduduk baru tersedia per kab/kota
+    const r = petaSvg(wil, s, ukuran, box.clientWidth < 520, tk);
     box.innerHTML = r.svg;
-    const bl = batasLegenda(r.maks);
+    $$<HTMLButtonElement>('[data-t]', kartu).forEach((b) => {
+      b.disabled = rasio && b.dataset.t === 'kecamatan';
+      b.classList.toggle('on', b.dataset.t === tk);
+    });
+    const bl = rasio ? legendaRasio(r.maks) : batasLegenda(r.maks);
     leg.innerHTML =
       `<span class="lg"><i style="background:${KOSONG}"></i>0</span>` +
-      bl.map((t, i) => `<span class="lg"><i style="background:${SKALA[r.maks <= SKALA.length ? kelas(i + 1, r.maks) : i]}"></i>${t}</span>`).join('') +
-      `<span class="lg-unit">${ukuran} per ${tingkat === 'kecamatan' ? 'kecamatan' : 'kab/kota'}</span>`;
-    $('.sub', kartu).textContent =
-      `Makin gelap, makin banyak ${ukuran}` +
-      (tingkat === 'kecamatan' && s.tanpaKecamatan ? ` · ${s.tanpaKecamatan} kegiatan belum punya kecamatan dan hanya terhitung di tingkat kab/kota` : '');
+      bl.map((t, i) => `<span class="lg"><i style="background:${SKALA[!rasio && r.maks <= SKALA.length ? kelas(i + 1, r.maks) : i]}"></i>${t}</span>`).join('') +
+      `<span class="lg-unit">${rasio ? 'kegiatan per 100 ribu penduduk' : `${ukuran} per ${tk === 'kecamatan' ? 'kecamatan' : 'kab/kota'}`}</span>`;
+    $('.sub', kartu).textContent = rasio
+      ? `Jumlah kegiatan dibandingkan jumlah penduduk (BPS, ${TAHUN_PENDUDUK}); hanya tingkat kab/kota`
+      : `Makin gelap, makin banyak ${LABEL_UKURAN[ukuran]}` +
+        (tk === 'kecamatan' && s.tanpaKecamatan ? ` · ${s.tanpaKecamatan} kegiatan belum punya kecamatan dan hanya terhitung di tingkat kab/kota` : '');
   };
   gambar();
   $$<HTMLButtonElement>('[data-t]', kartu).forEach(

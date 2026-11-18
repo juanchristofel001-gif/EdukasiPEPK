@@ -11,6 +11,7 @@ import { esc, $, hariIni, toast } from '../ui.js';
 import { muatPeta, petaSvg, batasLegenda, kelas, SKALA, KOSONG, type Geo } from './peta.js';
 import { trenHtml } from './dasbor.js';
 import { IKON } from '../ikon.js';
+import { desimal, SUMBER_PENDUDUK } from '../../shared/penduduk.js';
 import { LOGO, NAMA } from '../merek.js';
 
 let sibuk = false;
@@ -141,6 +142,7 @@ function dokumen(d: DataLaporan, desk: Record<Bagian, string>, geo: Geo, p: Peri
   const catatan = [
     d.adaPerkiraan && 'Sebagian jumlah peserta adalah perkiraan (ditandai ± di aplikasi).',
     d.tanpaKecamatan && `${d.tanpaKecamatan} kegiatan belum memiliki data kecamatan; cakupan kecamatan sebenarnya bisa lebih tinggi.`,
+    `Ukuran "per 100 rb penduduk" memakai data ${SUMBER_PENDUDUK} (Satu Data Banten).`,
     'Deskripsi dihitung langsung dari data SiPEDULIKU pada saat laporan dibuat.',
   ].filter(Boolean);
   blok.push(`<section class="lb lap-foot"><h4>Catatan data</h4><ul>${catatan.map((c) => `<li>${c}</li>`).join('')}</ul><p id="aiFoot"></p></section>`);
@@ -167,20 +169,21 @@ function tabelWilayah(d: DataLaporan, geo: Geo) {
   const urut = [...d.perWilayah].sort((a, b) => b.kegiatan - a.kegiatan || b.peserta - a.peserta);
   const mk = Math.max(1, ...urut.map((w) => w.kegiatan));
   const mp = Math.max(1, ...urut.map((w) => w.peserta));
+  const mr = Math.max(0.1, ...urut.map((w) => w.per100rb));
   const sel = (v: number, mx: number, teks: string) =>
     `<td><span class="lkb"><i style="width:${v ? Math.max(1.5, (v / mx) * 100) : 0}%"></i></span><b>${teks}</b></td>`;
   return `${petaKab(d, geo)}
-  <table class="lap-tabel lap-kab"><colgroup><col style="width:22%"><col style="width:22%"><col style="width:28%"><col style="width:28%"></colgroup><thead><tr><th>Kabupaten/kota</th><th>Kegiatan</th><th>Peserta</th><th>Kecamatan terjangkau</th></tr></thead><tbody>${urut
+  <table class="lap-tabel lap-kab"><colgroup><col style="width:19%"><col style="width:18%"><col style="width:23%"><col style="width:20%"><col style="width:20%"></colgroup><thead><tr><th>Kabupaten/kota</th><th>Kegiatan</th><th>Peserta</th><th>Per 100 rb penduduk</th><th>Kecamatan terjangkau</th></tr></thead><tbody>${urut
     .map(
       (w) =>
-        `<tr${w.kegiatan ? '' : ' class="nol"'}><td class="nm">${esc(w.nama.replace('Kabupaten ', 'Kab. '))}</td>${sel(w.kegiatan, mk, angka(w.kegiatan))}${sel(w.peserta, mp, angka(w.peserta))}${sel(
+        `<tr${w.kegiatan ? '' : ' class="nol"'}><td class="nm">${esc(w.nama.replace('Kabupaten ', 'Kab. '))}</td>${sel(w.kegiatan, mk, angka(w.kegiatan))}${sel(w.peserta, mp, angka(w.peserta))}${sel(w.per100rb, mr, desimal(w.per100rb))}${sel(
           w.kecTerjangkau,
           w.kecTotal,
           `${w.kecTerjangkau}/${w.kecTotal}`,
         ).replace('class="lkb"', 'class="lkb cak"')}</tr>`,
     )
     .join('')}</tbody></table>
-  <p class="lap-kecil">Batang kegiatan dan peserta dibandingkan dengan kab/kota tertinggi; batang kecamatan menunjukkan porsi kecamatan di kab/kota itu yang sudah dijangkau.</p>`;
+  <p class="lap-kecil">Batang kegiatan, peserta, dan per 100 rb penduduk dibandingkan dengan kab/kota tertinggi; batang kecamatan menunjukkan porsi kecamatan di kab/kota itu yang sudah dijangkau. Penduduk: ${SUMBER_PENDUDUK}.</p>`;
 }
 
 function petaKab(d: DataLaporan, geo: Geo) {

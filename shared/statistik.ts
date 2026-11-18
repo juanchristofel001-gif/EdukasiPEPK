@@ -2,6 +2,7 @@
 // supaya angka yang dilihat tim sama persis dengan angka yang dibaca AI.
 import { KABKOTA, type Kegiatan } from './schema.js';
 import { KECAMATAN, JUMLAH_KECAMATAN } from './kecamatan.js';
+import { PENDUDUK, per100rb } from './penduduk.js';
 
 export type Periode = { dari: string; sampai: string }; // YYYY-MM-DD, inklusif
 
@@ -11,7 +12,7 @@ export type Statistik = {
   peserta: number;
   adaPerkiraan: boolean;
   wilayahTerjangkau: number;
-  perWilayah: { nama: string; kegiatan: number; peserta: number; terakhir: string | null; kecTerjangkau: number; kecTotal: number }[];
+  perWilayah: { nama: string; kegiatan: number; peserta: number; terakhir: string | null; kecTerjangkau: number; kecTotal: number; penduduk: number; per100rb: number }[];
   kecamatanTerjangkau: number;
   tanpaKecamatan: number; // kegiatan di Banten yang belum punya kecamatan (mis. data impor lama)
   perKecamatan: { kab: string; nama: string; kegiatan: number; peserta: number; terakhir: string | null }[];
@@ -59,12 +60,17 @@ export function statistik(semua: Kegiatan[], p: Periode): Statistik {
     terakhir: ks.reduce<string | null>((t, k) => (!t || k.tanggal > t ? k.tanggal : t), null),
   });
   const perKecamatan = KABKOTA.flatMap((kab) => (KECAMATAN[kab] || []).map((nama) => ({ kab, nama, ...ringkas(list.filter((k) => k.kabkota === kab && k.kecamatan === nama)) })));
-  const perWilayah = KABKOTA.map((nama) => ({
-    nama,
-    ...ringkas(list.filter((k) => k.kabkota === nama)),
-    kecTerjangkau: perKecamatan.filter((c) => c.kab === nama && c.kegiatan).length,
-    kecTotal: (KECAMATAN[nama] || []).length,
-  }));
+  const perWilayah = KABKOTA.map((nama) => {
+    const r = ringkas(list.filter((k) => k.kabkota === nama));
+    return {
+      nama,
+      ...r,
+      kecTerjangkau: perKecamatan.filter((c) => c.kab === nama && c.kegiatan).length,
+      kecTotal: (KECAMATAN[nama] || []).length,
+      penduduk: PENDUDUK[nama] || 0,
+      per100rb: per100rb(r.kegiatan, nama),
+    };
+  });
   const perBulan = bulanAntara(p.dari, p.sampai).map((b) => {
     const ks = list.filter((k) => k.tanggal.startsWith(b));
     return { bulan: b, kegiatan: ks.length, peserta: ks.reduce((s, k) => s + (k.peserta || 0), 0) };
