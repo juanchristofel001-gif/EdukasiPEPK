@@ -196,7 +196,9 @@ function petaKab(d: DataLaporan, geo: Geo) {
 // Warna ditulis langsung di elemen SVG supaya tetap benar saat diubah menjadi gambar untuk PDF.
 function warnaSvg(svg: string) {
   return svg
-    .replaceAll('class="batas-kab"', 'class="batas-kab" fill="none" stroke="#4a4650" stroke-width="1.1"')
+    .replaceAll('class="wil kec"', 'style="stroke:#ffffff;stroke-width:0.6px;stroke-linejoin:round" class="wil kec"')
+    .replaceAll('class="wil"', 'style="stroke:#ffffff;stroke-width:1.6px;stroke-linejoin:round" class="wil"')
+    .replaceAll('class="batas-kab"', 'style="fill:none;stroke:#4a4650;stroke-width:1.1px;stroke-linejoin:round" class="batas-kab"')
     .replace(/(<g class="pl luar"[^>]*>)<path /g, '$1<path fill="none" stroke="#a39fa8" ')
     .replaceAll('<text ', '<text style="fill:#1c1a1d;stroke:rgba(255,255,255,0.92);stroke-width:3.5px;paint-order:stroke;stroke-linejoin:round" ');
 }
