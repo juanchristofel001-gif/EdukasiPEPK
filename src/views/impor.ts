@@ -1,5 +1,5 @@
 // Halaman "Impor Excel": unggah rekap Excel/CSV → cocokkan kolom → pratinjau & perbaiki → simpan sekaligus.
-import { periksa, perluKecamatan, type KegiatanInput } from '../../shared/schema.js';
+import { KABKOTA, periksa, perluKecamatan, type KegiatanInput } from '../../shared/schema.js';
 import { KOLOM_TUJUAN, tebakKolom, cariBarisJudul, barisKeIsian, kunciGanda, type Kolom, type Baris } from '../../shared/impor.js';
 import { tanggalPendek, angka } from '../../shared/statistik.js';
 import { api, nama } from '../api.js';
@@ -232,7 +232,7 @@ function pratinjau(el: HTMLElement) {
   </section>
   ${
     perluAi.length
-      ? `<section class="kartu ai-isi"><div><h2>${perluAi.length} baris punya kolom kosong</h2><p class="sub">Kab/kota, kecamatan, sasaran, atau topik yang kosong bisa ditebak AI dari judul, tempat, dan keterangan. Hasilnya ditandai "perlu dicek".</p></div><button class="btn lembut" id="aiIsi">${IKON.kilau}Lengkapi dengan AI</button></section>`
+      ? `<section class="kartu ai-isi"><div><h2>${perluAi.length} baris punya kolom kosong</h2><p class="sub">Kab/kota, kecamatan, sasaran, atau topik yang kosong bisa ditebak AI dari judul, tempat, dan Mitra Penyelenggara (misalnya alamat kampus atau sekolah mitra). Tiap tebakan disertai alasannya dan ditandai "perlu dicek".</p></div><button class="btn lembut" id="aiIsi">${IKON.kilau}Lengkapi dengan AI</button></section>`
       : ''
   }
   <section class="kartu">
@@ -313,9 +313,9 @@ function klikBaris(el: HTMLElement, e: Event) {
 async function lengkapiAi(el: HTMLElement, daftar: Item[], b: HTMLButtonElement) {
   b.disabled = true;
   let gagal = '';
-  for (let i = 0; i < daftar.length; i += 20) {
-    b.textContent = `AI melengkapi… ${Math.min(i + 20, daftar.length)}/${daftar.length}`;
-    const potong = daftar.slice(i, i + 20);
+  for (let i = 0; i < daftar.length; i += 15) {
+    b.textContent = `AI melengkapi… ${Math.min(i + 15, daftar.length)}/${daftar.length}`;
+    const potong = daftar.slice(i, i + 15);
     try {
       const hasil = await api.lengkapi(
         potong.map((it) => {
@@ -329,7 +329,19 @@ async function lengkapiAi(el: HTMLElement, daftar: Item[], b: HTMLButtonElement)
         if (!it) continue;
         const k = it.isian;
         if (!k.kabkota && h.kabkota) (k.kabkota = h.kabkota as KegiatanInput['kabkota']), (k.kabkotaDitebak = true), it.diisiAi.push('kab/kota');
-        if (!k.kecamatan && h.kecamatan && (!h.kabkota || h.kabkota === k.kabkota)) (k.kecamatan = h.kecamatan), (k.kecamatanDitebak = true), it.diisiAi.push('kecamatan');
+        const dasar = h.dasar ? ` (${h.dasar})` : '';
+        const tambah = (t: string, simpan = false) => {
+          if (!it.catatan.includes(t)) it.catatan.push(t);
+          if (simpan && !(k.catatan || '').includes(t)) k.catatan = [k.catatan, t].filter(Boolean).join('\n');
+        };
+        if (h.kabkota && k.kabkota && h.kabkota !== k.kabkota && (KABKOTA as readonly string[]).includes(k.kabkota))
+          tambah(`AI menilai lokasinya di ${h.kabkota}${h.kecamatan ? `, Kec. ${h.kecamatan}` : ''}, bukan ${k.kabkota}${dasar}. Cek ke tim.`, true);
+        else if (!k.kecamatan && h.kecamatan) {
+          k.kecamatan = h.kecamatan;
+          k.kecamatanDitebak = true;
+          it.diisiAi.push('kecamatan');
+          tambah(`Kecamatan ${h.kecamatan} ditebak AI${h.dasar ? ': ' + h.dasar : ''}`, true);
+        } else if (!k.kecamatan && h.dasar && perluKecamatan(k.kabkota)) tambah(`AI tidak menebak kecamatan: ${h.dasar}`);
         if (!k.sasaran.length && h.sasaran.length) (k.sasaran = h.sasaran as KegiatanInput['sasaran']), it.diisiAi.push('sasaran');
         if (!k.topik.length && h.topik.length) (k.topik = h.topik as KegiatanInput['topik']), it.diisiAi.push('topik');
         const lamaStatus = it.status;
