@@ -4,7 +4,7 @@
 import { izinkan, fail, ok, type Req, type Res } from './_lib/http.js';
 import { generateJson, GeminiError, type Part } from './_lib/gemini.js';
 import { KECAMATAN } from '../shared/kecamatan.js';
-import { KABKOTA, KABKOTA_LAIN, MODE, PERAN_OJK, SASARAN, TOPIK, KANAL, METODE, rapikan } from '../shared/schema.js';
+import { KABKOTA, KABKOTA_LAIN, MODE, BENTUK, JENIS, PERAN_OJK, SASARAN, TOPIK, KANAL, METODE, rapikan } from '../shared/schema.js';
 
 const MIME = ['image/jpeg', 'image/png', 'image/webp'];
 const MAKS = 4 * 1024 * 1024; // batas body Vercel 4,5 MB
@@ -18,7 +18,10 @@ Ambil data kegiatan dari laporan dan jawab HANYA dengan satu objek JSON berikut:
  "tema": "judul materi/tema yang dibawakan, tanpa tanda kutip",
  "pengundang": "lembaga atau acara yang mengundang/bermitra (misal nama sekolah, kampus, instansi); kosong jika OJK sendiri",
  "peranOjk": salah satu dari [${daftar(PERAN_OJK)}],
- "tanggal": "YYYY-MM-DD",
+ "tanggal": "YYYY-MM-DD (tanggal mulai)",
+ "tanggalSelesai": "YYYY-MM-DD jika kegiatan lebih dari satu hari, selain itu \"\"",
+ "bentuk": salah satu dari [${daftar(BENTUK)}],
+ "jenis": salah satu dari [${daftar(JENIS)}] (syariah jika materi keuangan syariah),
  "tempat": "tempat seperti tertulis di laporan",
  "kabkota": salah satu dari [${daftar([...KABKOTA, ...KABKOTA_LAIN])}],
  "kabkotaDitebak": true jika kabupaten/kota TIDAK tertulis di laporan dan kamu menyimpulkannya dari nama tempat, false jika tertulis,

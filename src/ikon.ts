@@ -50,6 +50,8 @@ export const IKON = {
 export const IKON_PILIHAN: Record<string, string> = {
   'Pelajar SD/SMP': IKON.buku,
   'Pelajar SMA/SMK': IKON.buku,
+  'Pelajar (jenjang tidak disebut)': IKON.buku,
+  Komunitas: IKON.orang,
   Mahasiswa: IKON.topi,
   'Guru/dosen': IKON.papan,
   UMKM: IKON.toko,
@@ -69,6 +71,8 @@ export const IKON_PILIHAN: Record<string, string> = {
   'Pembiayaan dan pindar legal': IKON.koin,
   'Pinjol ilegal': IKON.hp,
   'Investasi bodong': IKON.turun,
+  'Waspada aktivitas keuangan ilegal': IKON.perisai,
+  'Perkembangan ekonomi dan sektor jasa keuangan daerah': IKON.grafik,
   'Judi online': IKON.dadu,
   'Penipuan digital/scam': IKON.kail,
   'Perlindungan data pribadi': IKON.gembok,

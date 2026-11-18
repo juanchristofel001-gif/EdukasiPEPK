@@ -213,7 +213,9 @@ async function pasangPeta(el: HTMLElement, s: Statistik) {
       `<span class="lg"><i style="background:${KOSONG}"></i>0</span>` +
       bl.map((t, i) => `<span class="lg"><i style="background:${SKALA[r.maks <= SKALA.length ? kelas(i + 1, r.maks) : i]}"></i>${t}</span>`).join('') +
       `<span class="lg-unit">${ukuran} per ${tingkat === 'kecamatan' ? 'kecamatan' : 'kab/kota'}</span>`;
-    $('.sub', kartu).textContent = `Makin gelap, makin banyak ${ukuran}`;
+    $('.sub', kartu).textContent =
+      `Makin gelap, makin banyak ${ukuran}` +
+      (tingkat === 'kecamatan' && s.tanpaKecamatan ? ` · ${s.tanpaKecamatan} kegiatan belum punya kecamatan dan hanya terhitung di tingkat kab/kota` : '');
   };
   gambar();
   $$<HTMLButtonElement>('[data-t]', kartu).forEach(

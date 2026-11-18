@@ -1,5 +1,5 @@
 // Form isian satu kegiatan. Dipakai untuk mengecek hasil AI dan untuk mengubah kegiatan yang sudah tersimpan.
-import { KABKOTA, KABKOTA_LAIN, MODE, PERAN_OJK, SASARAN, TOPIK, KANAL, METODE, rapikan, type KegiatanInput } from '../../shared/schema.js';
+import { KABKOTA, KABKOTA_LAIN, MODE, BENTUK, JENIS, PERAN_OJK, SASARAN, TOPIK, KANAL, METODE, rapikan, type KegiatanInput } from '../../shared/schema.js';
 import { esc, $, $$ } from '../ui.js';
 import { KECAMATAN } from '../../shared/kecamatan.js';
 
@@ -57,7 +57,10 @@ export function formHtml(k: KegiatanInput, opt: { tandaiAi?: boolean } = {}) {
     ${field('Judul kegiatan', `<input name="judul" value="${esc(k.judul)}" required>`, { lebar: true, wajib: true })}
     ${field('Tema / judul materi', `<input name="tema" value="${esc(k.tema)}">`, { lebar: true })}
     ${field('Tanggal', `<input type="date" name="tanggal" value="${esc(k.tanggal)}" required>`, { wajib: true })}
+    ${field('Tanggal selesai', `<input type="date" name="tanggalSelesai" value="${esc(k.tanggalSelesai)}">`, { catatan: 'Isi kalau kegiatan lebih dari satu hari.' })}
+    ${field('Bentuk kegiatan', pilihan('bentuk', BENTUK, k.bentuk))}
     ${field('Mode', pilihan('mode', MODE, k.mode))}
+    ${field('Jenis', pilihan('jenis', JENIS, k.jenis))}
     ${field('Tempat', `<input name="tempat" value="${esc(k.tempat)}">`)}
     ${field(
       'Kabupaten/kota',
@@ -95,6 +98,9 @@ export function bacaForm(form: HTMLFormElement, dasar: KegiatanInput): KegiatanI
     judul: v('judul'),
     tema: v('tema'),
     tanggal: v('tanggal'),
+    tanggalSelesai: v('tanggalSelesai'),
+    bentuk: v('bentuk'),
+    jenis: v('jenis'),
     mode: v('mode'),
     tempat: v('tempat'),
     kabkota: v('kabkota'),

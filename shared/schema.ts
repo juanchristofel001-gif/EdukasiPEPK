@@ -17,11 +17,16 @@ export const SEMUA_WILAYAH = [...KABKOTA, ...KABKOTA_LAIN] as const;
 
 export const MODE = ['Luring', 'Daring', 'Hybrid'] as const;
 
+// Mengikuti kolom rekap resmi KOJK.
+export const BENTUK = ['Sosialisasi', 'Workshop', 'Talkshow', 'Seminar', 'Pelatihan/ToT', 'Pameran/expo', 'Siaran media', 'GERAK Syariah', 'Lainnya'] as const;
+export const JENIS = ['Konvensional', 'Syariah', 'Konvensional dan Syariah'] as const;
+
 export const PERAN_OJK = ['Penyelenggara', 'Narasumber undangan', 'Kolaborasi dengan mitra'] as const;
 
 export const SASARAN = [
   'Pelajar SD/SMP',
   'Pelajar SMA/SMK',
+  'Pelajar (jenjang tidak disebut)',
   'Mahasiswa',
   'Guru/dosen',
   'UMKM',
@@ -31,6 +36,7 @@ export const SASARAN = [
   'Petani/nelayan',
   'Penyandang disabilitas',
   'Pekerja migran',
+  'Komunitas',
   'Masyarakat umum',
   'Lainnya',
 ] as const;
@@ -45,11 +51,13 @@ export const TOPIK = [
   'Pembiayaan dan pindar legal',
   'Pinjol ilegal',
   'Investasi bodong',
+  'Waspada aktivitas keuangan ilegal',
   'Judi online',
   'Penipuan digital/scam',
   'Perlindungan data pribadi',
   'Perlindungan konsumen dan pengaduan',
   'Keuangan syariah',
+  'Perkembangan ekonomi dan sektor jasa keuangan daerah',
   'Lainnya',
 ] as const;
 
@@ -63,7 +71,10 @@ export type Kegiatan = {
   tema: string; // judul materi, misal "Belajar Bareng: Cerdas Financial di Dunia Digital"
   pengundang: string; // lembaga/acara yang mengundang atau bermitra, misal "SMA Athalia"
   peranOjk: (typeof PERAN_OJK)[number] | '';
-  tanggal: string; // YYYY-MM-DD
+  tanggal: string; // YYYY-MM-DD (tanggal mulai)
+  tanggalSelesai: string; // YYYY-MM-DD, kosong kalau satu hari
+  bentuk: (typeof BENTUK)[number] | '';
+  jenis: (typeof JENIS)[number] | '';
   tempat: string;
   kabkota: (typeof SEMUA_WILAYAH)[number] | '';
   kabkotaDitebak: boolean; // true kalau wilayah tidak tertulis di laporan dan ditebak AI dari nama tempat
@@ -127,6 +138,9 @@ export function rapikan(raw: Record<string, unknown>): KegiatanInput {
     pengundang: str(raw.pengundang, 160),
     peranOjk: pick(PERAN_OJK, raw.peranOjk),
     tanggal: isTanggal(tgl) ? tgl : '',
+    tanggalSelesai: isTanggal(str(raw.tanggalSelesai, 10)) && str(raw.tanggalSelesai, 10) > tgl ? str(raw.tanggalSelesai, 10) : '',
+    bentuk: pick(BENTUK, raw.bentuk),
+    jenis: pick(JENIS, raw.jenis),
     tempat: str(raw.tempat, 200),
     kabkota: pick(SEMUA_WILAYAH, raw.kabkota),
     kabkotaDitebak: raw.kabkotaDitebak === true,
@@ -149,12 +163,13 @@ export function rapikan(raw: Record<string, unknown>): KegiatanInput {
 }
 
 // Kolom wajib sebelum disimpan. Mengembalikan daftar pesan; kosong berarti valid.
-export function periksa(k: KegiatanInput): string[] {
+// Kecamatan wajib untuk kegiatan baru di Banten; untuk data impor lama atau saat mengubah boleh menyusul.
+export function periksa(k: KegiatanInput, opt: { kecamatan?: boolean } = {}): string[] {
   const e: string[] = [];
   if (!k.judul) e.push('Judul kegiatan belum diisi.');
   if (!k.tanggal) e.push('Tanggal belum diisi.');
   if (!k.kabkota) e.push('Kabupaten/kota belum dipilih.');
-  else if (perluKecamatan(k.kabkota) && !k.kecamatan) e.push('Kecamatan belum dipilih.');
+  else if (opt.kecamatan !== false && perluKecamatan(k.kabkota) && !k.kecamatan) e.push('Kecamatan belum dipilih.');
   if (k.peserta === null) e.push('Jumlah peserta belum diisi.');
   if (!k.sasaran.length) e.push('Pilih minimal satu sasaran peserta.');
   return e;
@@ -167,6 +182,9 @@ export const LABEL: Partial<Record<keyof KegiatanInput, string>> = {
   pengundang: 'Pengundang/mitra',
   peranOjk: 'Peran OJK',
   tanggal: 'Tanggal',
+  tanggalSelesai: 'Tanggal selesai',
+  bentuk: 'Bentuk kegiatan',
+  jenis: 'Jenis (konvensional/syariah)',
   tempat: 'Tempat',
   kabkota: 'Kabupaten/kota',
   kecamatan: 'Kecamatan',

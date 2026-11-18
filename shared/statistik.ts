@@ -13,6 +13,7 @@ export type Statistik = {
   wilayahTerjangkau: number;
   perWilayah: { nama: string; kegiatan: number; peserta: number; terakhir: string | null; kecTerjangkau: number; kecTotal: number }[];
   kecamatanTerjangkau: number;
+  tanpaKecamatan: number; // kegiatan di Banten yang belum punya kecamatan (mis. data impor lama)
   perKecamatan: { kab: string; nama: string; kegiatan: number; peserta: number; terakhir: string | null }[];
   perBulan: { bulan: string; kegiatan: number; peserta: number }[]; // bulan = YYYY-MM
   sasaran: [string, number][];
@@ -76,6 +77,7 @@ export function statistik(semua: Kegiatan[], p: Periode): Statistik {
     wilayahTerjangkau: perWilayah.filter((w) => w.kegiatan > 0).length,
     perWilayah,
     kecamatanTerjangkau: perKecamatan.filter((c) => c.kegiatan).length,
+    tanpaKecamatan: list.filter((k) => KECAMATAN[k.kabkota] && !k.kecamatan).length,
     perKecamatan,
     perBulan,
     sasaran: hitung(list, (k) => k.sasaran),

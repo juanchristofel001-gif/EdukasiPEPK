@@ -68,6 +68,9 @@ export async function viewDaftar(el: HTMLElement) {
 
 const KOLOM: [string, (k: Kegiatan) => unknown][] = [
   ['Tanggal', (k) => k.tanggal],
+  ['Tanggal selesai', (k) => k.tanggalSelesai],
+  ['Bentuk', (k) => k.bentuk],
+  ['Jenis', (k) => k.jenis],
   ['Judul', (k) => k.judul],
   ['Tema', (k) => k.tema],
   ['Pengundang/mitra', (k) => k.pengundang],
@@ -121,7 +124,7 @@ export async function viewDetail(el: HTMLElement, id: string) {
   $('#simpan', el).onclick = async (e) => {
     const b = e.currentTarget as HTMLButtonElement;
     const isian = bacaForm(form, k);
-    const salah = periksa(isian);
+    const salah = periksa(isian, { kecamatan: false });
     tampilGalat(form, salah);
     if (salah.length) return;
     b.disabled = true;

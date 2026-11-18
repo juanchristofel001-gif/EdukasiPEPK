@@ -24,7 +24,7 @@ export default async function handler(req: Req, res: Res) {
         if (req.query.impor) {
           const file = String(req.body?.file || 'file').slice(0, 120);
           const daftar = (Array.isArray(req.body?.isian) ? req.body.isian : []).slice(0, 2000).map((x: Record<string, unknown>) => rapikan({ ...x, sumberFile: file }));
-          const salah = daftar.map((k: ReturnType<typeof rapikan>, i: number) => ({ i, e: periksa(k) })).filter((x: { e: string[] }) => x.e.length);
+          const salah = daftar.map((k: ReturnType<typeof rapikan>, i: number) => ({ i, e: periksa(k, { kecamatan: false }) })).filter((x: { e: string[] }) => x.e.length);
           if (!daftar.length) return fail(res, 400, 'Tidak ada baris untuk diimpor.');
           if (salah.length) return fail(res, 400, `${salah.length} baris belum lengkap (mis. baris ke-${salah[0].i + 1}: ${salah[0].e.join(' ')}).`);
           await cadanganSebelum('impor');
@@ -54,7 +54,7 @@ export default async function handler(req: Req, res: Res) {
         const lama = id && (await s.get(id));
         if (!lama || lama.dihapus) return fail(res, 404, 'Kegiatan tidak ditemukan. Mungkin sudah dihapus.');
         const isian = rapikan(req.body || {});
-        const salah = periksa(isian);
+        const salah = periksa(isian, { kecamatan: false });
         if (salah.length) return fail(res, 400, salah.join(' '));
         const k = { ...isian, id: lama.id, dibuat: lama.dibuat, diubah: new Date().toISOString() };
         const perubahan = beda(lama, k);

@@ -210,9 +210,10 @@ async function susunItem() {
   }
 }
 
+const tanpaKec = (k: KegiatanInput) => perluKecamatan(k.kabkota) && !k.kecamatan;
 function nilai(it: Item) {
-  const salah = periksa(it.isian);
-  it.status = it.ganda ? 'ganda' : salah.length ? 'kurang' : it.catatan.length || it.isian.kabkotaDitebak || it.isian.kecamatanDitebak || it.diisiAi.length ? 'cek' : 'siap';
+  const salah = periksa(it.isian, { kecamatan: false });
+  it.status = it.ganda ? 'ganda' : salah.length ? 'kurang' : it.catatan.length || tanpaKec(it.isian) || it.isian.kabkotaDitebak || it.isian.kecamatanDitebak || it.diisiAi.length ? 'cek' : 'siap';
   if (it.status === 'kurang') it.simpan = false;
 }
 
@@ -260,7 +261,7 @@ function pratinjau(el: HTMLElement) {
 function barisHtml(it: Item) {
   const k = it.isian;
   const tebak = k.kabkotaDitebak || k.kecamatanDitebak;
-  const masalah = [...periksa(k), ...(it.ganda ? [it.ganda] : []), ...it.catatan, ...(it.diisiAi.length ? [`Diisi AI: ${it.diisiAi.join(', ')}`] : [])];
+  const masalah = [...periksa(k, { kecamatan: false }), ...(tanpaKec(k) ? ['Kecamatan belum diketahui (boleh dilengkapi nanti)'] : []), ...(it.ganda ? [it.ganda] : []), ...it.catatan, ...(it.diisiAi.length ? [`Diisi AI: ${it.diisiAi.join(', ')}`] : [])];
   return `<div class="ib s-${it.status}${it.buka ? ' buka' : ''}" data-no="${it.no}">
     <div class="ib-baris">
       <input type="checkbox" class="ib-cek" aria-label="Simpan baris ${it.no}"${it.simpan ? ' checked' : ''}${it.status === 'kurang' ? ' disabled' : ''}>
@@ -295,7 +296,7 @@ function klikBaris(el: HTMLElement, e: Event) {
   if (t.closest('[data-terap]')) {
     const form = $<HTMLFormElement>('form', box);
     const isian = bacaForm(form, it.isian);
-    const salah = periksa(isian);
+    const salah = periksa(isian, { kecamatan: false });
     tampilGalat(form, salah);
     if (salah.length) return;
     it.isian = isian;

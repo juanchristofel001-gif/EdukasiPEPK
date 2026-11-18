@@ -1,5 +1,5 @@
 // Mengubah baris Excel/CSV menjadi isian kegiatan. Tidak bergantung pada browser, jadi bisa diuji di Node.
-import { KABKOTA, KABKOTA_LAIN, MODE, PERAN_OJK, SASARAN, TOPIK, KANAL, METODE, rapikan, type KegiatanInput } from './schema.js';
+import { KABKOTA, KABKOTA_LAIN, MODE, PERAN_OJK, SASARAN, TOPIK, KANAL, METODE, BENTUK, JENIS, rapikan, type KegiatanInput } from './schema.js';
 import { KECAMATAN } from './kecamatan.js';
 
 export type Kolom = keyof KegiatanInput | '';
@@ -9,7 +9,10 @@ export const KOLOM_TUJUAN: [Kolom, string][] = [
   ['', 'Abaikan kolom ini'],
   ['judul', 'Judul kegiatan'],
   ['tema', 'Tema / judul materi'],
-  ['tanggal', 'Tanggal'],
+  ['tanggal', 'Tanggal (mulai)'],
+  ['tanggalSelesai', 'Tanggal selesai'],
+  ['bentuk', 'Bentuk kegiatan'],
+  ['jenis', 'Jenis (konvensional/syariah)'],
   ['tempat', 'Tempat / lokasi'],
   ['kabkota', 'Kabupaten/kota'],
   ['kecamatan', 'Kecamatan'],
@@ -35,19 +38,24 @@ const norm = (s: unknown) =>
     .replace(/[^a-z0-9]+/g, ' ')
     .trim();
 
-// Kata kunci judul kolom → kolom tujuan. Dicek berurutan; yang pertama cocok dipakai.
+// Kata kunci judul kolom → kolom tujuan. Dicek berurutan dari yang paling spesifik; yang pertama cocok dipakai.
+// Judul yang cocok dengan ABAIKAN tidak dipetakan (mis. provinsi, triwulan, nomor urut).
+const ABAIKAN = /^(no|nomor|no urut)$|provinsi|ruang lingkup|triwulan|periode|^kojk$|^kantor ojk$|^satker$/;
 const SINONIM: [Kolom, RegExp][] = [
-  ['tanggal', /\b(tgl|tanggal|hari tanggal|date|waktu pelaksanaan|pelaksanaan)\b/],
+  ['tanggalSelesai', /\b(tanggal|tgl) (berakhir|selesai|akhir)|\bsampai tanggal\b/],
+  ['tanggal', /\b(tanggal|tgl)( mulai)?\b|\bhari tanggal\b|\bdate\b|\bwaktu pelaksanaan\b/],
   ['kecamatan', /\b(kec|kecamatan)\b/],
-  ['kabkota', /\b(kab|kabupaten|kota|kab kota|kabupaten kota|wilayah|daerah)\b/],
-  ['peserta', /\b(jumlah peserta|jml peserta|peserta|jumlah|total peserta|jml)\b/],
+  ['kabkota', /\b(kab|kabupaten|kota|kab kota|kabupaten kota)\b|^wilayah$|^daerah$/],
+  ['sasaran', /\b(sasaran|segmen|target peserta|kelompok sasaran|jenis peserta)\b/],
+  ['peserta', /\b(jumlah peserta|jml peserta|total peserta)\b|^peserta$|^jumlah$|^jml$/],
   ['sasaranDetail', /\b(keterangan peserta|detail peserta|profil peserta)\b/],
-  ['sasaran', /\b(sasaran|segmen|target|kelompok sasaran|jenis peserta)\b/],
+  ['peranOjk', /\bperan\b/],
   ['narasumber', /\b(narasumber|pemateri|pembicara|nara sumber)\b/],
-  ['pengundang', /\b(mitra|pengundang|penyelenggara|instansi|lembaga|kerja sama|kerjasama|pihak)\b/],
-  ['peranOjk', /\b(peran)\b/],
-  ['mode', /\b(mode|metode pelaksanaan|luring|daring|online|offline|media)\b/],
-  ['tema', /\b(tema|materi|judul materi|topik materi utama)\b/],
+  ['pengundang', /\b(mitra|pengundang|penyelenggara|instansi|lembaga|kerja sama|kerjasama)\b/],
+  ['bentuk', /\b(bentuk)\b/],
+  ['jenis', /\b(jenis kegiatan|konvensional|syariah)\b|^jenis$/],
+  ['mode', /\b(metode pelaksanaan|mode|luring|daring|online|offline)\b/],
+  ['tema', /\b(tema|materi|judul materi)\b/],
   ['topik', /\b(topik|pokok bahasan|isu)\b/],
   ['kanal', /\b(kanal|layanan dikenalkan)\b/],
   ['metode', /\b(metode)\b/],
@@ -62,7 +70,7 @@ export function tebakKolom(judul: unknown[]): Kolom[] {
   const dipakai = new Set<Kolom>();
   return judul.map((j) => {
     const n = norm(j);
-    if (!n || /^(no|nomor|no urut)$/.test(n)) return '';
+    if (!n || ABAIKAN.test(n)) return '';
     const hit = SINONIM.find(([k, re]) => re.test(n) && !dipakai.has(k));
     if (!hit) return '';
     // kolom daftar (topik, sasaran) boleh dari beberapa kolom; kolom tunggal hanya sekali
@@ -142,7 +150,10 @@ export function bacaKabkota(v: unknown): string {
   if (/tangerang/.test(inti)) return kota ? 'Kota Tangerang' : 'Kabupaten Tangerang';
   if (/serang/.test(inti)) return kota ? 'Kota Serang' : 'Kabupaten Serang';
   const lain = [...KABKOTA, ...KABKOTA_LAIN].find((k) => norm(k) === n);
-  return lain || '';
+  if (lain) return lain;
+  // nama kab/kota lain (mis. "Kota Adm. Jakarta Pusat", "Kab. Bogor") → Luar Banten
+  if (/\b(kota|kab|kabupaten|jakarta|bogor|bekasi|depok|bandung|lampung)\b/.test(n)) return 'Luar Banten';
+  return '';
 }
 
 // Kecamatan dengan toleransi salah ketik (jarak ≤ 2). Kalau kab/kota belum diketahui, dicari di seluruh Banten.
@@ -165,7 +176,8 @@ export function bacaKecamatan(kab: string, v: unknown): { kab: string; kec: stri
 
 const KATA_SASARAN: [string, RegExp][] = [
   ['Pelajar SD/SMP', /\b(sd|smp|mts|mi|sekolah dasar|siswa smp|pelajar smp)\b/],
-  ['Pelajar SMA/SMK', /\b(sma|smk|ma|slta|siswa|pelajar)\b/],
+  ['Pelajar SMA/SMK', /\b(sma|smk|ma|slta)\b/],
+  ['Pelajar (jenjang tidak disebut)', /\b(siswa|pelajar)\b/],
   ['Mahasiswa', /\b(mahasiswa|kampus|universitas|politeknik|stie|perguruan tinggi)\b/],
   ['Guru/dosen', /\b(guru|dosen|tenaga pendidik|pengajar)\b/],
   ['UMKM', /\b(umkm|umk|pelaku usaha|wirausaha|ukm)\b/],
@@ -175,10 +187,11 @@ const KATA_SASARAN: [string, RegExp][] = [
   ['Petani/nelayan', /\b(petani|nelayan|kelompok tani)\b/],
   ['Penyandang disabilitas', /\b(disabilitas|difabel|tunanetra|tunarungu)\b/],
   ['Pekerja migran', /\b(pmi|pekerja migran|tki)\b/],
+  ['Komunitas', /\b(komunitas|organisasi|ormas|karang taruna|asosiasi)\b/],
   ['Masyarakat umum', /\b(masyarakat|umum|warga)\b/],
 ];
 const KATA_TOPIK: [string, RegExp][] = [
-  ['Pengenalan OJK dan industri jasa keuangan', /\b(pengenalan ojk|tentang ojk|ijk|industri jasa keuangan|lembaga jasa keuangan)\b/],
+  ['Pengenalan OJK dan industri jasa keuangan', /\b(pengenalan ojk|tentang ojk|ijk|sjk|sektor jasa keuangan|industri jasa keuangan|lembaga jasa keuangan)\b/],
   ['Pengelolaan keuangan pribadi', /\b(pengelolaan keuangan|perencanaan keuangan|keuangan pribadi|keuangan keluarga|budgeting|cerdas finansial|cerdas keuangan)\b/],
   ['Perbankan dan tabungan', /\b(bank|perbankan|tabung|tabungan|simpanan)\b/],
   ['Pasar modal dan investasi', /\b(pasar modal|saham|reksa dana|reksadana|investasi legal|obligasi)\b/],
@@ -187,11 +200,13 @@ const KATA_TOPIK: [string, RegExp][] = [
   ['Pembiayaan dan pindar legal', /\b(pembiayaan|pindar|fintech lending|kredit)\b/],
   ['Pinjol ilegal', /\b(pinjol|pinjaman online ilegal)\b/],
   ['Investasi bodong', /\b(investasi bodong|investasi ilegal|bodong|skema ponzi)\b/],
+  ['Waspada aktivitas keuangan ilegal', /\b(waspada|ilegal|aktivitas keuanga?n? ilegal|satgas pasti)\b/],
   ['Judi online', /\b(judi|judol)\b/],
   ['Penipuan digital/scam', /\b(penipuan|scam|phishing|social engineering|modus)\b/],
   ['Perlindungan data pribadi', /\b(data pribadi|pdp|kebocoran data)\b/],
-  ['Perlindungan konsumen dan pengaduan', /\b(perlindungan konsumen|pengaduan|apk|appk|157)\b/],
+  ['Perlindungan konsumen dan pengaduan', /\b(perlindungan konsumen|pelindungan konsumen|pengaduan|apk|appk|157)\b/],
   ['Keuangan syariah', /\b(syariah)\b/],
+  ['Perkembangan ekonomi dan sektor jasa keuangan daerah', /\b(perkembangan ekonomi|kondisi ekonomi|perkembangan sektor|ekonomi prov|ekonomi daerah)\b/],
 ];
 const KATA_KANAL: [string, RegExp][] = [
   ['Kontak OJK 157', /\b157\b/],
@@ -231,12 +246,45 @@ export function bacaMode(v: unknown) {
   if (/luring|offline|tatap muka|langsung/.test(n)) return 'Luring';
   return MODE.find((m) => norm(m) === n) || '';
 }
+export function bacaBentuk(v: unknown) {
+  const n = norm(v);
+  if (!n) return '';
+  const persis = BENTUK.find((b) => norm(b) === n);
+  if (persis) return persis;
+  if (/gerak syariah/.test(n)) return 'GERAK Syariah';
+  if (/sosialisasi|edukasi|penyuluhan/.test(n)) return 'Sosialisasi';
+  if (/workshop|lokakarya/.test(n)) return 'Workshop';
+  if (/talkshow|talk show|dialog/.test(n)) return 'Talkshow';
+  if (/seminar|webinar|kuliah umum/.test(n)) return 'Seminar';
+  if (/pelatihan|tot|training|bimtek/.test(n)) return 'Pelatihan/ToT';
+  if (/pameran|expo|bazar|festival|booth/.test(n)) return 'Pameran/expo';
+  if (/siaran|radio|tv|televisi|podcast/.test(n)) return 'Siaran media';
+  return 'Lainnya';
+}
+export function bacaJenis(v: unknown) {
+  const n = norm(v);
+  if (/konvensional/.test(n) && /syariah/.test(n)) return 'Konvensional dan Syariah';
+  if (/syariah/.test(n)) return 'Syariah';
+  if (/konvensional/.test(n)) return 'Konvensional';
+  return JENIS.find((j) => norm(j) === n) || '';
+}
 export function bacaPeran(v: unknown) {
   const n = norm(v);
   if (/narasumber|undang/.test(n)) return 'Narasumber undangan';
   if (/kolaborasi|kerja ?sama|bersama/.test(n)) return 'Kolaborasi dengan mitra';
   if (/penyelenggara|mandiri|ojk/.test(n)) return 'Penyelenggara';
   return PERAN_OJK.find((m) => norm(m) === n) || '';
+}
+
+// Kecamatan yang disebut di teks (judul/tempat), mis. "… di Kecamatan Mauk" atau "… di Pakuhaji".
+// Hanya dipakai kalau tepat satu kecamatan dari kab/kota itu yang disebut.
+export function kecamatanDariTeks(kab: string, teks: string): string {
+  const l = KECAMATAN[kab];
+  if (!l) return '';
+  const t = ' ' + norm(teks) + ' ';
+  // harus didahului "di", "kecamatan", atau "kec" supaya nama kampus (mis. "Sultan Ageng Tirtayasa") tidak ikut terbaca
+  const pasti = l.filter((k) => [' di ', ' kecamatan ', ' kec '].some((p) => t.includes(p + norm(k) + ' ')));
+  return pasti.length === 1 ? pasti[0] : '';
 }
 
 export type Baris = {
@@ -258,6 +306,7 @@ export function barisKeIsian(sel: unknown[], peta: Kolom[], namaFile: string, no
 
   let kab = bacaKabkota(satu('kabkota'));
   if (satu('kabkota') !== undefined && !kab) catatan.push(`Kab/kota "${String(satu('kabkota')).slice(0, 30)}" tidak dikenali`);
+  if (kab === 'Luar Banten') catatan.push(`"${String(satu('kabkota')).slice(0, 40)}" di luar Banten`);
   if (kab && /^(serang|tangerang)$/.test(norm(satu('kabkota')))) catatan.push(`"${String(satu('kabkota'))}" dianggap ${kab}; pastikan bukan kota`);
   const kecMentah = satu('kecamatan');
   const kc = bacaKecamatan(kab, kecMentah);
@@ -267,6 +316,12 @@ export function barisKeIsian(sel: unknown[], peta: Kolom[], namaFile: string, no
     kabDitebak = true;
   }
   if (kecMentah !== undefined && !kc.kec) catatan.push(`Kecamatan "${String(kecMentah).slice(0, 30)}" tidak ditemukan${kab ? ' di ' + kab : ''}`);
+
+  let kecDariJudul = '';
+  if (!kc.kec && kecMentah === undefined && kab) {
+    kecDariJudul = kecamatanDariTeks(kab, [teks('judul'), teks('tempat'), teks('pengundang')].join(' '));
+    if (kecDariJudul) catatan.push(`Kecamatan ${kecDariJudul} diambil dari judul/tempat`);
+  }
 
   const pMentah = satu('peserta');
   const peserta = bacaAngka(pMentah);
@@ -282,11 +337,14 @@ export function barisKeIsian(sel: unknown[], peta: Kolom[], namaFile: string, no
     pengundang: teks('pengundang'),
     peranOjk: bacaPeran(satu('peranOjk')),
     tanggal,
+    tanggalSelesai: bacaTanggal(satu('tanggalSelesai'), tahunBawaan),
+    bentuk: bacaBentuk(satu('bentuk')),
+    jenis: bacaJenis(satu('jenis')),
     tempat: teks('tempat'),
     kabkota: kab,
     kabkotaDitebak: kabDitebak,
-    kecamatan: kc.kec,
-    kecamatanDitebak: false,
+    kecamatan: kc.kec || kecDariJudul,
+    kecamatanDitebak: !!kecDariJudul,
     mode: bacaMode(satu('mode')),
     narasumber: teks('narasumber'),
     sasaran: sasaran.length ? sasaran : bacaSasaran(teks('sasaranDetail')),
@@ -304,6 +362,6 @@ export function barisKeIsian(sel: unknown[], peta: Kolom[], namaFile: string, no
   return { no, isian, catatan };
 }
 
-const judulRapat = (s: string) => norm(s).replace(/\b(edukasi|keuangan|kegiatan|sosialisasi|literasi|ojk)\b/g, '').replace(/\s+/g, ' ').trim().slice(0, 40);
+const judulRapat = (s: string) => norm(s).replace(/\b(edukasi|keuangan|kegiatan|sosialisasi|literasi|ojk)\b/g, '').replace(/\s+/g, ' ').trim();
 // Kunci untuk mendeteksi kegiatan ganda: tanggal + kab/kota + judul inti.
 export const kunciGanda = (k: Pick<KegiatanInput, 'tanggal' | 'kabkota' | 'judul'>) => `${k.tanggal}|${k.kabkota}|${judulRapat(k.judul)}`;
