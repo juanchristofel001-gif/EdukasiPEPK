@@ -6,6 +6,16 @@ import { JUMLAH_KECAMATAN } from './kecamatan.js';
 import { statistik, dalamPeriode, namaBulan, tanggalPanjang, angka, type Periode, type Statistik } from './statistik.js';
 import { desimal, TAHUN_PENDUDUK } from './penduduk.js';
 
+// Naikkan angka ini setiap kali isi laporan atau perintah AI berubah, supaya interpretasi lama ditulis ulang.
+export const VERSI_TAFSIR = 2;
+
+// Penanda isi data satu periode: jumlah kegiatan + waktu perubahan terakhir.
+// Kalau ada kegiatan ditambah, diubah, atau dihapus, penanda ini berubah.
+export function sidikData(semua: Kegiatan[], p: Periode) {
+  const l = dalamPeriode(semua, p);
+  return `${l.length}|${l.reduce((m, k) => (k.diubah > m ? k.diubah : m), '')}`;
+}
+
 export const BAGIAN = [
   ['peta', 'Sebaran kecamatan'],
   ['wilayah', 'Kegiatan per kabupaten/kota'],

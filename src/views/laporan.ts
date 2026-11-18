@@ -3,7 +3,7 @@
 import { KABKOTA, type Kegiatan } from '../../shared/schema.js';
 import { JUMLAH_KECAMATAN } from '../../shared/kecamatan.js';
 import { tanggalPanjang, tanggalPendek, angka, labelPeriode, type Periode } from '../../shared/statistik.js';
-import { dataLaporan, deskripsi, BAGIAN, type Bagian, type DataLaporan } from '../../shared/laporan.js';
+import { dataLaporan, deskripsi, sidikData, BAGIAN, VERSI_TAFSIR, type Bagian, type DataLaporan } from '../../shared/laporan.js';
 import type { TafsirLaporan } from '../../api/laporan.js';
 import { api, nama } from '../api.js';
 import { dataKegiatan } from '../data.js';
@@ -46,17 +46,25 @@ export async function viewLaporan(el: HTMLElement, q: URLSearchParams) {
   if (!d.kegiatan) return;
 
   const status = $('#lapStatus', el);
+  const sidik = sidikData(semua, p);
+  // Interpretasi masih sesuai bila ditulis untuk data yang sama dan versi laporan yang sama.
+  const masihSesuai = (t: TafsirLaporan) => t.versi === VERSI_TAFSIR && (t.sidik ? t.sidik === sidik : t.jumlahData === d.kegiatan);
   const ulang = $<HTMLButtonElement>('#tulisUlang', el);
+  let sekarang: TafsirLaporan | null = null;
   const tampilkan = (t: TafsirLaporan | null, galat = '') => {
+    sekarang = t;
     isiTafsir(el, t, galat);
     ulang.hidden = false;
     ulang.innerHTML = `${IKON.kilau}${t ? 'Tulis ulang interpretasi' : 'Tulis interpretasi AI'}`;
-    status.hidden = !(galat || (t && t.jumlahData !== d.kegiatan));
+    const usang = !!t && !masihSesuai(t);
+    status.hidden = !(galat || usang);
     status.className = 'lap-status' + (galat ? ' galat' : '');
     status.textContent = galat
-      ? `Interpretasi AI belum tersedia: ${galat}. Laporan tetap bisa diunduh dengan deskripsi angka saja.`
-      : t && t.jumlahData !== d.kegiatan
-        ? `Interpretasi ditulis saat data berisi ${t.jumlahData} kegiatan; sekarang ${d.kegiatan}. Klik "Tulis ulang interpretasi" supaya sesuai.`
+      ? t
+        ? `Interpretasi belum bisa ditulis ulang: ${galat}. Yang tampil masih interpretasi sebelumnya; coba lagi nanti.`
+        : `Interpretasi AI belum tersedia: ${galat}. Laporan tetap bisa diunduh dengan deskripsi angka saja.`
+      : usang
+        ? `Data sudah berubah sejak interpretasi ini ditulis. Klik "Tulis ulang interpretasi" supaya sesuai.`
         : '';
   };
   const tulis = async () => {
@@ -65,7 +73,7 @@ export async function viewLaporan(el: HTMLElement, q: URLSearchParams) {
     try {
       tampilkan(await api.tafsirLaporan(dari, sampai, true));
     } catch (e: any) {
-      tampilkan(null, e.message);
+      tampilkan(sekarang, e.message);
     }
     $$tunggu(el, false);
     ulang.disabled = false;
@@ -75,8 +83,11 @@ export async function viewLaporan(el: HTMLElement, q: URLSearchParams) {
 
   try {
     const t = await api.tafsirLaporan(dari, sampai);
-    if (t) tampilkan(t);
-    else await tulis();
+    if (t && masihSesuai(t)) tampilkan(t);
+    else {
+      if (t) tampilkan(t); // tampilkan dulu yang lama sambil AI menulis ulang
+      await tulis();
+    }
   } catch (e: any) {
     tampilkan(null, e.message);
   }

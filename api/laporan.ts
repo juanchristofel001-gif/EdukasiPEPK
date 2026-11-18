@@ -7,13 +7,15 @@ import { izinkan, fail, ok, type Req, type Res } from './_lib/http.js';
 import { db, aktif, DbError } from './_lib/db.js';
 import { generateJson, GeminiError } from './_lib/gemini.js';
 import { isTanggal } from '../shared/schema.js';
-import { dataLaporan, deskripsi, bahanAi, BAGIAN, type Bagian } from '../shared/laporan.js';
+import { dataLaporan, deskripsi, bahanAi, sidikData, BAGIAN, VERSI_TAFSIR, type Bagian } from '../shared/laporan.js';
 import { labelPeriode } from '../shared/statistik.js';
 
 export type TafsirLaporan = {
   dibuat: string;
   model: string;
   jumlahData: number;
+  versi?: number;
+  sidik?: string;
   ringkasan: string;
   sorotan: string[];
   interpretasi: Partial<Record<Bagian, string>>;
@@ -31,7 +33,8 @@ export default async function handler(req: Req, res: Res) {
     if (req.method === 'GET') return ok(res, { tafsir: await s.getMeta(key) });
     if (req.method !== 'POST') return fail(res, 405, 'Metode tidak didukung.');
 
-    const d = dataLaporan(await aktif(), { dari, sampai });
+    const semua = await aktif();
+    const d = dataLaporan(semua, { dari, sampai });
     if (!d.kegiatan) return fail(res, 400, 'Belum ada kegiatan di periode ini.');
     const desk = deskripsi(d);
     const prompt = `Kamu analis program edukasi keuangan OJK Provinsi Banten dan sedang menulis laporan untuk pimpinan.
@@ -75,6 +78,8 @@ Aturan:
       dibuat: new Date().toISOString(),
       model,
       jumlahData: d.kegiatan,
+      versi: VERSI_TAFSIR,
+      sidik: sidikData(semua, { dari, sampai }),
       ringkasan: String(out?.ringkasan || '').slice(0, 1200),
       sorotan: list(out?.sorotan, 6),
       interpretasi: Object.fromEntries(BAGIAN.map(([k]) => [k, String(out?.interpretasi?.[k] || '').slice(0, 800)]).filter(([, v]) => v)),
