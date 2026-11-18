@@ -23,7 +23,7 @@ export async function viewDaftar(el: HTMLElement) {
   }
   el.innerHTML = `
   <header class="ph"><div><h1>Kegiatan</h1><p>${semua.length} kegiatan tercatat</p></div>
-    <div class="kontrol"><a class="btn" href="#/sampah">${IKON.sampah}Sampah & cadangan</a><button class="btn" id="csv"${semua.length ? '' : ' disabled'}>${IKON.unduh}Unduh CSV</button><a class="btn utama" href="#/unggah">${IKON.unggah}Unggah laporan</a></div></header>
+    <div class="kontrol"><a class="btn" href="#/sampah">${IKON.sampah}Sampah & cadangan</a><button class="btn" id="csv"${semua.length ? '' : ' disabled'}>${IKON.unduh}Unduh CSV</button><a class="btn utama" href="#/unggah">${IKON.unggah}Input data</a></div></header>
   <div class="saring">
     <input type="search" id="cari" placeholder="Cari judul, tempat, mitra, narasumber…" value="${esc(cari)}">
     <select id="wil"><option value="">Semua wilayah</option>${SEMUA_WILAYAH.map((w) => `<option${w === wilayah ? ' selected' : ''}>${w}</option>`).join('')}</select>
@@ -45,7 +45,7 @@ export async function viewDaftar(el: HTMLElement) {
             )}</span></td><td>${esc(k.kabkota)}${k.kecamatan ? `<span class="sub">Kec. ${esc(k.kecamatan)}</span>` : ''}</td><td>${esc(k.sasaran.join(', '))}</td><td class="r">${k.pesertaPerkiraan ? '±' : ''}${angka(k.peserta || 0)}</td></tr>`,
           )
           .join('')}</tbody></table>`
-      : `<p class="sub kosong-kecil">${semua.length ? 'Tidak ada kegiatan yang cocok dengan pencarian.' : 'Belum ada kegiatan. Unggah laporan pertama.'}</p>`;
+      : `<p class="sub kosong-kecil">${semua.length ? 'Tidak ada kegiatan yang cocok dengan pencarian.' : 'Belum ada kegiatan. Tambahkan lewat Input data.'}</p>`;
   };
   gambar();
   $<HTMLInputElement>('#cari', el).oninput = (e) => {
@@ -115,7 +115,7 @@ export async function viewDetail(el: HTMLElement, id: string) {
     k.dicatatOleh ? ' oleh ' + esc(k.dicatatOleh) : ''
   }${k.diubah !== k.dibuat ? ' · diubah ' + new Date(k.diubah).toLocaleDateString('id-ID', { dateStyle: 'long' }) : ''}</p></header>
   <section class="kartu">${formHtml(k)}<div class="aksi"><button class="btn bahaya" id="hapus">${IKON.sampah}Pindahkan ke sampah</button><button class="btn utama" id="simpan">Simpan perubahan</button></div></section>
-  ${kartuLaporanWord(k)}
+  ${kartuLaporanWord(k.naskah, k.tanggalSelesai || k.tanggal)}
   <section class="kartu" id="rwKeg"><div class="ch"><div><h2>Riwayat kegiatan ini</h2><p class="sub">Siapa menambah dan mengubah, kolom apa saja</p></div></div><div class="isi"><div class="memuat"><i></i><i></i><i></i></div></div></section>`;
   api
     .riwayat(k.id)
@@ -123,7 +123,10 @@ export async function viewDetail(el: HTMLElement, id: string) {
     .catch((e) => ($('#rwKeg .isi', el).innerHTML = `<p class="galat">${esc(e.message)}</p>`));
   const form = $<HTMLFormElement>('form', el);
   pasangForm(form);
-  pasangLaporanWord(el, form, k);
+  pasangLaporanWord($('.lw', el), form, () => k, async (isian) => {
+    await api.ubah(k.id, isian);
+    await segarkanData();
+  });
   $('#simpan', el).onclick = async (e) => {
     const b = e.currentTarget as HTMLButtonElement;
     const isian = bacaForm(form, k);

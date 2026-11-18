@@ -111,7 +111,7 @@ export async function viewDasbor(el: HTMLElement) {
 }
 
 function kosongHtml() {
-  return `<section class="kartu kosong"><span class="kosong-ikon">${IKON.unggah}</span><h2>Belum ada kegiatan tercatat</h2><p>Mulai dengan mengunggah laporan kegiatan edukasi. AI akan mengisi datanya untuk kamu cek.</p><a class="btn utama" href="#/unggah">Unggah laporan</a></section>`;
+  return `<section class="kartu kosong"><span class="kosong-ikon">${IKON.unggah}</span><h2>Belum ada kegiatan tercatat</h2><p>Mulai dengan mengisi formulir, mengunggah laporan kegiatan, atau mengimpor rekap Excel.</p><a class="btn utama" href="#/unggah">Input data</a></section>`;
 }
 
 function isi(s: Statistik, sAll: Statistik, semua: Kegiatan[], p: Periode, h: string) {
@@ -124,7 +124,7 @@ function isi(s: Statistik, sAll: Statistik, semua: Kegiatan[], p: Periode, h: st
       <span class="hero-lbl">Kegiatan edukasi keuangan${wk ? ` · ${esc(wk.nama)}` : ''}</span>
       <b class="hero-angka">${angka(s.kegiatan)}</b>
       <span class="hero-sub">${s.kegiatan ? `Kegiatan terakhir ${tanggalPanjang(semua.filter((k) => k.tanggal >= p.dari && k.tanggal <= p.sampai)[0].tanggal)}` : 'Belum ada kegiatan di periode ini'}</span>
-      <div class="hero-aksi"><button class="btn putih" id="salin">${IKON.salin}Salin status</button><a class="btn kaca" href="#/laporan?dari=${p.dari}&sampai=${p.sampai}${wk ? `&kab=${encodeURIComponent(wk.nama)}` : ''}">${IKON.file}Buat laporan PDF${wk ? ` ${esc(wk.nama.replace('Kabupaten ', 'Kab. '))}` : ''}</a><a class="btn kaca" href="#/unggah">${IKON.unggah}Unggah laporan</a></div>
+      <div class="hero-aksi"><button class="btn putih" id="salin">${IKON.salin}Salin status</button><a class="btn kaca" href="#/laporan?dari=${p.dari}&sampai=${p.sampai}${wk ? `&kab=${encodeURIComponent(wk.nama)}` : ''}">${IKON.file}Buat laporan PDF${wk ? ` ${esc(wk.nama.replace('Kabupaten ', 'Kab. '))}` : ''}</a><a class="btn kaca" href="#/unggah">${IKON.unggah}Input data</a></div>
     </div>
     <div class="hero-stat">
       <div><span>${IKON.orang}Peserta</span><b>${s.adaPerkiraan ? '<small>±</small>' : ''}${angka(s.peserta)}</b></div>

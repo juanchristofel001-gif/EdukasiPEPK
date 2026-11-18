@@ -1,10 +1,9 @@
 // Laporan Word per kegiatan: naskah A–E (ditulis AI, disunting tim) diisikan ke template .docx tim
 // (public/template-laporan.docx) sehingga formatnya sama persis dengan laporan yang biasa dibuat manual.
-import { BAGIAN_NASKAH, periksa, type Kegiatan, type KegiatanInput, type Naskah } from '../../shared/schema.js';
+import { BAGIAN_NASKAH, periksa, type KegiatanInput, type Naskah } from '../../shared/schema.js';
 import { tanggalPanjang } from '../../shared/statistik.js';
 import { api } from '../api.js';
-import { segarkanData } from '../data.js';
-import { esc, $, $$, toast } from '../ui.js';
+import { esc, $, toast } from '../ui.js';
 import { IKON } from '../ikon.js';
 import { bacaForm, tampilGalat } from './form.js';
 
@@ -20,83 +19,93 @@ function ttdTersimpan(): Ttd {
   }
 }
 
-export function kartuLaporanWord(k: Kegiatan) {
-  const n = k.naskah;
+// Bagian "Laporan Word" untuk satu kegiatan. Dipakai di halaman kegiatan dan di formulir Input data.
+// opt.lipat: tampil sebagai bagian yang bisa dibuka-tutup (formulir input), bukan kartu sendiri.
+export function kartuLaporanWord(n: Naskah | null, tanggal: string, opt: { lipat?: boolean; labelTombol?: string } = {}) {
   const t = ttdTersimpan();
-  return `<section class="kartu lw" id="laporanWord">
-  <div class="ch"><div><h2>${IKON.file}Laporan Word</h2><p class="sub">Naskah A–E diisikan ke template laporan tim. Sunting dulu, lalu unduh .docx.</p></div>
-    <div class="kontrol"><button class="btn lembut" id="lwTulis">${IKON.kilau}${n ? 'Tulis ulang dengan AI' : 'Tulis naskah dengan AI'}</button></div></div>
+  const isi = `
+  <div class="lw-kepala"><p class="sub">Naskah bagian A–E diisikan ke template laporan tim. Tulis dengan AI atau ketik sendiri, sunting, lalu unduh.</p>
+    <button type="button" class="btn lembut lw-tulis">${IKON.kilau}${n ? 'Tulis ulang dengan AI' : 'Tulis naskah dengan AI'}</button></div>
   <p class="lw-status" hidden></p>
   <div class="lw-isi">
-    ${BAGIAN_NASKAH.map(([b, judul]) => `<label class="lw-bag"><span>${judul}</span><textarea name="lw_${b}" rows="${b === 'penutup' ? 2 : b === 'pelaksanaan' ? 3 : 5}" placeholder="${n ? '' : 'Klik "Tulis naskah dengan AI", atau tulis sendiri.'}">${esc(n?.[b] || '')}</textarea></label>`).join('')}
-    <p class="lw-kecil">[NARASUMBER] otomatis diganti nama narasumber dari isian di atas. Tabel hari/tanggal, waktu, dan tempat diambil dari isian kegiatan.</p>
+    ${BAGIAN_NASKAH.map(([b, judul]) => `<label class="lw-bag"><span>${judul}</span><textarea data-lw="${b}" rows="${b === 'penutup' ? 2 : b === 'pelaksanaan' ? 3 : 4}">${esc(n?.[b] || '')}</textarea></label>`).join('')}
+    <p class="lw-kecil">[NARASUMBER] otomatis diganti nama narasumber dari formulir. Tabel hari/tanggal, waktu, dan tempat diambil dari isian kegiatan.</p>
     <fieldset class="lw-ttd"><legend>Tanda tangan</legend>
-      <label><span>Ditetapkan di</span><input name="lw_tempat" value="${esc(t.tempat)}"></label>
-      <label><span>Pada tanggal</span><input name="lw_tanggal" value="${esc(tanggalPanjang(k.tanggalSelesai || k.tanggal))}"></label>
-      <label><span>Jabatan</span><textarea name="lw_jabatan" rows="2">${esc(t.jabatan)}</textarea></label>
-      <label><span>Nama</span><input name="lw_nama" value="${esc(t.nama)}"></label>
+      <label><span>Ditetapkan di</span><input data-ttd="tempat" value="${esc(t.tempat)}"></label>
+      <label><span>Pada tanggal</span><input data-ttd="tanggal" value="${tanggal ? esc(tanggalPanjang(tanggal)) : ''}" placeholder="mengikuti tanggal kegiatan"></label>
+      <label><span>Jabatan</span><textarea data-ttd="jabatan" rows="2">${esc(t.jabatan)}</textarea></label>
+      <label><span>Nama</span><input data-ttd="nama" value="${esc(t.nama)}"></label>
     </fieldset>
   </div>
-  <div class="aksi"><button class="btn utama" id="lwUnduh">${IKON.unduh}Simpan naskah & unduh .docx</button></div>
-</section>`;
+  ${opt.lipat ? '' : `<div class="aksi"><button type="button" class="btn utama lw-unduh">${IKON.unduh}${opt.labelTombol || 'Simpan naskah & unduh .docx'}</button></div>`}`;
+  return opt.lipat
+    ? `<details class="lw lw-lipat"${n ? ' open' : ''}><summary>${IKON.file}<span><b>Laporan Word</b><small>Opsional · unduh laporan .docx sesuai template tim</small></span></summary>${isi}</details>`
+    : `<section class="kartu lw"><div class="ch"><div><h2>${IKON.file}Laporan Word</h2></div></div>${isi}</section>`;
 }
 
-export function pasangLaporanWord(el: HTMLElement, form: HTMLFormElement, k: Kegiatan) {
-  const kartu = $('#laporanWord', el);
+// Naskah yang sedang tertulis di layar (null kalau semua kosong).
+export function naskahDiLayar(kartu: HTMLElement): Naskah | null {
+  const n = Object.fromEntries(BAGIAN_NASKAH.map(([b]) => [b, ($<HTMLTextAreaElement>(`[data-lw="${b}"]`, kartu)?.value || '').trim()])) as Naskah;
+  return Object.values(n).some(Boolean) ? n : null;
+}
+
+// simpan: menyimpan isian (kegiatan baru atau perubahan) sebelum .docx dibuat.
+export function pasangLaporanWord(kartu: HTMLElement, form: HTMLFormElement, dasar: () => KegiatanInput, simpan: (isian: KegiatanInput) => Promise<void>, opt: { kecamatanWajib?: boolean } = {}) {
   const status = $('.lw-status', kartu);
   const tampil = (t: string, galat = false) => {
+    if (t && kartu instanceof HTMLDetailsElement) kartu.open = true;
     status.hidden = !t;
     status.textContent = t;
     status.classList.toggle('galat', galat);
   };
-  const naskahLayar = (): Naskah => Object.fromEntries(BAGIAN_NASKAH.map(([b]) => [b, $<HTMLTextAreaElement>(`[name="lw_${b}"]`, kartu).value.trim()])) as Naskah;
-
-  $('#lwTulis', kartu).onclick = async (e) => {
-    const b = e.currentTarget as HTMLButtonElement;
-    const ada = Object.values(naskahLayar()).some(Boolean);
-    if (ada && !confirm('Naskah yang sekarang akan diganti tulisan AI yang baru. Lanjutkan?')) return;
-    b.disabled = true;
+  const tulis = $<HTMLButtonElement>('.lw-tulis', kartu);
+  tulis.onclick = async () => {
+    if (naskahDiLayar(kartu) && !confirm('Naskah yang sekarang akan diganti tulisan AI yang baru. Lanjutkan?')) return;
+    const isian = bacaForm(form, dasar());
+    if (!isian.judul || !isian.tanggal) return tampil('Isi judul dan tanggal kegiatan dulu supaya AI bisa menulis naskah.', true);
+    tulis.disabled = true;
     tampil('AI sedang menulis naskah… (10–30 detik)');
     try {
-      const n = await api.naskah(bacaForm(form, k));
-      BAGIAN_NASKAH.forEach(([x]) => ($<HTMLTextAreaElement>(`[name="lw_${x}"]`, kartu).value = n[x]));
+      const n = await api.naskah(isian);
+      BAGIAN_NASKAH.forEach(([x]) => ($<HTMLTextAreaElement>(`[data-lw="${x}"]`, kartu).value = n[x]));
       tampil('Naskah siap. Periksa dan sunting seperlunya, lalu unduh.');
     } catch (err: any) {
       tampil('Gagal menulis naskah: ' + err.message, true);
     }
-    b.disabled = false;
-    b.innerHTML = `${IKON.kilau}Tulis ulang dengan AI`;
+    tulis.disabled = false;
+    tulis.innerHTML = `${IKON.kilau}Tulis ulang dengan AI`;
   };
 
-  $('#lwUnduh', kartu).onclick = async (e) => {
-    const b = e.currentTarget as HTMLButtonElement;
-    const naskah = naskahLayar();
-    if (!Object.values(naskah).some(Boolean)) return tampil('Naskah masih kosong. Tulis dengan AI atau isi sendiri dulu.', true);
-    const isian: KegiatanInput = { ...bacaForm(form, k), naskah };
-    const salah = periksa(isian, { kecamatan: false });
+  // Di formulir Input data tombol unduh ada di baris aksi kartu, bukan di dalam bagian Laporan Word.
+  const unduhBtn = $<HTMLButtonElement>('.lw-unduh', kartu) || $<HTMLButtonElement>('.lw-unduh', kartu.closest('.item') || kartu);
+  const label = unduhBtn.innerHTML;
+  unduhBtn.onclick = async () => {
+    const naskah = naskahDiLayar(kartu);
+    if (!naskah) {
+      if (kartu instanceof HTMLDetailsElement) kartu.open = true;
+      return tampil('Naskah laporan masih kosong. Klik "Tulis naskah dengan AI" atau isi sendiri dulu.', true);
+    }
+    const isian: KegiatanInput = { ...bacaForm(form, dasar()), naskah };
+    const salah = periksa(isian, { kecamatan: opt.kecamatanWajib ?? false });
     tampilGalat(form, salah);
     if (salah.length) return tampil('Ada isian kegiatan yang perlu dibetulkan dulu (lihat formulir di atas).', true);
-    const ttd: Ttd = {
-      tempat: $<HTMLInputElement>('[name="lw_tempat"]', kartu).value.trim(),
-      jabatan: $<HTMLTextAreaElement>('[name="lw_jabatan"]', kartu).value.trim(),
-      nama: $<HTMLInputElement>('[name="lw_nama"]', kartu).value.trim(),
-    };
+    const v = (k: string) => ($<HTMLInputElement>(`[data-ttd="${k}"]`, kartu)?.value || '').trim();
+    const ttd: Ttd = { tempat: v('tempat'), jabatan: v('jabatan'), nama: v('nama') };
     try {
       localStorage.setItem(KUNCI_TTD, JSON.stringify(ttd));
     } catch {}
-    b.disabled = true;
-    b.textContent = 'Menyimpan…';
+    unduhBtn.disabled = true;
+    unduhBtn.textContent = 'Menyimpan…';
     try {
-      await api.ubah(k.id, isian); // simpan naskah + perubahan isian supaya laporan bisa diunduh ulang
-      await segarkanData();
-      b.textContent = 'Menyusun .docx…';
-      await buatDocx(isian, ttd, $<HTMLInputElement>('[name="lw_tanggal"]', kartu).value.trim());
-      tampil('Naskah tersimpan dan laporan .docx diunduh.');
+      await simpan(isian);
+      unduhBtn.textContent = 'Menyusun .docx…';
+      await buatDocx(isian, ttd, v('tanggal') || tanggalPanjang(isian.tanggalSelesai || isian.tanggal));
+      tampil('Kegiatan dan naskah tersimpan, laporan .docx diunduh.');
     } catch (err: any) {
       tampil('Gagal: ' + err.message, true);
     }
-    b.disabled = false;
-    b.innerHTML = `${IKON.unduh}Simpan naskah & unduh .docx`;
+    unduhBtn.disabled = false;
+    unduhBtn.innerHTML = label;
   };
 }
 

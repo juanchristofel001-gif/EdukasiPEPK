@@ -28,7 +28,7 @@ export function viewImpor(el: HTMLElement) {
   return pratinjau(el);
 }
 
-const kepala = (sub: string) => `<a class="teks kembali" href="#/unggah">← Unggah laporan</a>
+const kepala = (sub: string) => `<a class="teks kembali" href="#/unggah">← Input data</a>
   <header class="ph"><div><h1>Impor dari Excel</h1><p>${sub}</p></div>${tahap !== 'pilih' ? `<div class="kontrol"><button class="btn" id="ulang">Ganti file</button></div>` : ''}</header>
   <ol class="langkah"><li class="${tahap === 'pilih' ? 'on' : 'ok'}">Pilih file</li><li class="${tahap === 'kolom' ? 'on' : tahap === 'pratinjau' ? 'ok' : ''}">Cocokkan kolom</li><li class="${tahap === 'pratinjau' ? 'on' : ''}">Periksa & simpan</li></ol>`;
 

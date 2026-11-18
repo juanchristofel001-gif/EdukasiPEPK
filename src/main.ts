@@ -18,7 +18,7 @@ const app = $('#app');
 
 const NAV = [
   ['#/dasbor', 'Dasbor', IKON.dasbor],
-  ['#/unggah', 'Unggah laporan', IKON.unggah],
+  ['#/unggah', 'Input data', IKON.unggah],
   ['#/kegiatan', 'Kegiatan', IKON.daftar],
   ['#/riwayat', 'Riwayat', IKON.riwayat],
 ] as const;
