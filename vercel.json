@@ -14,6 +14,9 @@
     },
     "api/kegiatan.ts": {
       "maxDuration": 60
+    },
+    "api/laporan.ts": {
+      "maxDuration": 60
     }
   },
   "crons": [

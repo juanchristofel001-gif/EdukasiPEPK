@@ -9,10 +9,11 @@ import { JUMLAH_KECAMATAN } from '../../shared/kecamatan.js';
 import { IKON, ikonPilihan } from '../ikon.js';
 
 let pilihan = 'tahun';
+export const pilihanPeriode = () => pilihan;
 let ukuran: Ukuran = 'kegiatan';
 let tingkat: Tingkat = 'kecamatan';
 
-function periodeDari(p: string, semua: Kegiatan[]): Periode {
+export function periodeDari(p: string, semua: Kegiatan[]): Periode {
   const h = hariIni();
   const y = h.slice(0, 4);
   if (p === 'tahun') return { dari: `${y}-01-01`, sampai: `${y}-12-31` };
@@ -83,7 +84,7 @@ function isi(s: Statistik, semua: Kegiatan[], p: Periode, h: string) {
       <span class="hero-lbl">Kegiatan edukasi keuangan</span>
       <b class="hero-angka">${angka(s.kegiatan)}</b>
       <span class="hero-sub">${s.kegiatan ? `Kegiatan terakhir ${tanggalPanjang(semua.filter((k) => k.tanggal >= p.dari && k.tanggal <= p.sampai)[0].tanggal)}` : 'Belum ada kegiatan di periode ini'}</span>
-      <div class="hero-aksi"><button class="btn putih" id="salin">${IKON.salin}Salin status</button><a class="btn kaca" href="#/unggah">${IKON.unggah}Unggah laporan</a></div>
+      <div class="hero-aksi"><button class="btn putih" id="salin">${IKON.salin}Salin status</button><a class="btn kaca" href="#/laporan?dari=${p.dari}&sampai=${p.sampai}">${IKON.file}Buat laporan PDF</a><a class="btn kaca" href="#/unggah">${IKON.unggah}Unggah laporan</a></div>
     </div>
     <div class="hero-stat">
       <div><span>${IKON.orang}Peserta</span><b>${s.adaPerkiraan ? '<small>±</small>' : ''}${angka(s.peserta)}</b></div>
@@ -140,7 +141,7 @@ function wilayahHtml(s: Statistik, h: string) {
     .join('')}</ol>`;
 }
 
-function trenHtml(s: Statistik) {
+export function trenHtml(s: Statistik) {
   const bulan = s.perBulan.slice(-12);
   const mx = Math.max(1, ...bulan.map((b) => b.kegiatan));
   return `<div class="tren" role="img" aria-label="Jumlah kegiatan per bulan">${bulan
@@ -154,7 +155,7 @@ function trenHtml(s: Statistik) {
 }
 
 // Daftar batang horizontal; tiap baris punya ikon dan label yang boleh dua baris (tidak terpotong).
-function batang(data: [string, number][], n = 13, opt: { ikon?: (k: string) => string; sub?: (k: string) => string; label?: (k: string) => string } = {}) {
+export function batang(data: [string, number][], n = 13, opt: { ikon?: (k: string) => string; sub?: (k: string) => string; label?: (k: string) => string } = {}) {
   if (!data.length) return '<p class="kosong-kecil">Belum ada data.</p>';
   const mx = data[0][1];
   return `<ul class="hb">${data
