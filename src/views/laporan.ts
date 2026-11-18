@@ -3,7 +3,7 @@
 import { KABKOTA, type Kegiatan } from '../../shared/schema.js';
 import { JUMLAH_KECAMATAN } from '../../shared/kecamatan.js';
 import { tanggalPanjang, tanggalPendek, angka, labelPeriode, type Periode } from '../../shared/statistik.js';
-import { dataLaporan, deskripsi, sidikData, BAGIAN, VERSI_TAFSIR, type Bagian, type DataLaporan } from '../../shared/laporan.js';
+import { dataLaporan, deskripsi, sidikData, judulBagian, BAGIAN, VERSI_TAFSIR, type Bagian, type DataLaporan } from '../../shared/laporan.js';
 import type { TafsirLaporan } from '../../api/laporan.js';
 import { api, nama } from '../api.js';
 import { dataKegiatan } from '../data.js';
@@ -24,6 +24,8 @@ export async function viewLaporan(el: HTMLElement, q: URLSearchParams) {
     return;
   }
   const p: Periode = { dari, sampai };
+  const kabQ = q.get('kab') || '';
+  const kab = (KABKOTA as readonly string[]).includes(kabQ) ? kabQ : undefined;
   el.innerHTML = `<div class="memuat besar"><i></i><i></i><i></i></div>`;
   let semua: Kegiatan[], geo: Geo;
   try {
@@ -32,21 +34,21 @@ export async function viewLaporan(el: HTMLElement, q: URLSearchParams) {
     el.innerHTML = `<p class="galat">${esc(e.message)}</p>`;
     return;
   }
-  const d = dataLaporan(semua, p);
+  const d = dataLaporan(semua, p, kab);
   const desk = deskripsi(d);
   const dibuat = new Date();
 
   el.innerHTML = `
   <header class="ph lap-ph">
-    <div><a class="lnk kembali" href="#/dasbor">← Dasbor</a><h1>Laporan edukasi</h1><p>${labelPeriode(p)} · ${d.kegiatan} kegiatan</p></div>
+    <div><a class="lnk kembali" href="#/dasbor">← Dasbor</a><h1>Laporan edukasi${kab ? ` – ${esc(kab)}` : ''}</h1><p>${labelPeriode(p)} · ${d.kegiatan} kegiatan</p></div>
     <div class="kontrol"><button class="btn lembut" id="tulisUlang" hidden>${IKON.kilau}Tulis ulang interpretasi</button><button class="btn utama" id="unduhPdf"${d.kegiatan ? '' : ' disabled'}>${IKON.unduh}Unduh PDF</button></div>
   </header>
   <p class="lap-status" id="lapStatus" hidden></p>
-  ${d.kegiatan ? `<div class="lap" id="lap">${dokumen(d, desk, geo, p, dibuat)}</div>` : '<section class="kartu kosong"><h2>Tidak ada kegiatan di periode ini</h2><p>Pilih periode lain di dasbor.</p></section>'}`;
+  ${d.kegiatan ? `<div class="lap" id="lap">${dokumen(d, desk, geo, p, dibuat)}</div>` : `<section class="kartu kosong"><h2>Tidak ada kegiatan${kab ? ` di ${esc(kab)}` : ''} pada periode ini</h2><p>Pilih periode lain di dasbor.</p></section>`}`;
   if (!d.kegiatan) return;
 
   const status = $('#lapStatus', el);
-  const sidik = sidikData(semua, p);
+  const sidik = sidikData(semua, p, kab);
   // Interpretasi masih sesuai bila ditulis untuk data yang sama dan versi laporan yang sama.
   const masihSesuai = (t: TafsirLaporan) => t.versi === VERSI_TAFSIR && (t.sidik ? t.sidik === sidik : t.jumlahData === d.kegiatan);
   const ulang = $<HTMLButtonElement>('#tulisUlang', el);
@@ -71,7 +73,7 @@ export async function viewLaporan(el: HTMLElement, q: URLSearchParams) {
     ulang.disabled = true;
     $$tunggu(el, true);
     try {
-      tampilkan(await api.tafsirLaporan(dari, sampai, true));
+      tampilkan(await api.tafsirLaporan(dari, sampai, true, kab));
     } catch (e: any) {
       tampilkan(sekarang, e.message);
     }
@@ -79,10 +81,11 @@ export async function viewLaporan(el: HTMLElement, q: URLSearchParams) {
     ulang.disabled = false;
   };
   ulang.onclick = tulis;
-  $('#unduhPdf', el).onclick = (e) => unduhPdf(el, e.currentTarget as HTMLButtonElement, p);
+  $('#unduhPdf', el).onclick = (e) => unduhPdf(el, e.currentTarget as HTMLButtonElement, p, kab);
+  if (kab) zoomKab(el, kab);
 
   try {
-    const t = await api.tafsirLaporan(dari, sampai);
+    const t = await api.tafsirLaporan(dari, sampai, false, kab);
     if (t && masihSesuai(t)) tampilkan(t);
     else {
       if (t) tampilkan(t); // tampilkan dulu yang lama sambil AI menulis ulang
@@ -126,19 +129,25 @@ function dokumen(d: DataLaporan, desk: Record<Bagian, string>, geo: Geo, p: Peri
   blok.push(`<section class="lb sampul">
     <div class="sp-atas"><img src="/logo-ojk.png" alt="Otoritas Jasa Keuangan" width="325" height="128"><span class="sp-merek"><span class="logo">${LOGO}</span><b>${NAMA}</b></span></div>
     <p class="sp-kicau">Laporan kegiatan edukasi keuangan</p>
-    <h1>Edukasi Literasi Keuangan<br>OJK Provinsi Banten</h1>
+    <h1>Edukasi Literasi Keuangan<br>${d.kab ? esc(d.kab) : 'OJK Provinsi Banten'}</h1>
     <dl class="sp-meta"><div><dt>Periode</dt><dd>${/^(Tahun|Triwulan)/.test(labelPeriode(p)) ? `${labelPeriode(p)}<br><small>${tanggalPanjang(p.dari)} – ${tanggalPanjang(p.sampai)}</small>` : labelPeriode(p)}</dd></div><div><dt>Dibuat</dt><dd>${tanggalPanjang(hariIni())}, ${String(dibuat.getHours()).padStart(2, '0')}.${String(dibuat.getMinutes()).padStart(2, '0')}</dd></div><div><dt>Oleh</dt><dd>${esc(nama.get())}</dd></div></dl>
   </section>`);
   blok.push(`<section class="lb lap-teks"><h2>Ringkasan</h2><div class="ai-slot" id="aiRingkasan"><p class="lap-catat">AI sedang menulis ringkasan…</p></div></section>`);
   blok.push(`<section class="lb"><div class="lap-kpi">
     ${kpi('Kegiatan', angka(d.kegiatan))}
     ${kpi('Peserta', (d.adaPerkiraan ? '±' : '') + angka(d.peserta))}
-    ${kpi('Kab/kota terjangkau', `${d.wilayahTerjangkau}<small>/${KABKOTA.length}</small>`)}
-    ${kpi('Kecamatan terjangkau', `${d.kecamatanTerjangkau}<small>/${JUMLAH_KECAMATAN}</small>`)}
+    ${
+      d.kab
+        ? (() => {
+            const w = d.banten!.perWilayah.find((x) => x.nama === d.kab)!;
+            return kpi('Kecamatan terjangkau', `${w.kecTerjangkau}<small>/${w.kecTotal}</small>`) + kpi('Per 100 rb penduduk', desimal(w.per100rb));
+          })()
+        : kpi('Kab/kota terjangkau', `${d.wilayahTerjangkau}<small>/${KABKOTA.length}</small>`) + kpi('Kecamatan terjangkau', `${d.kecamatanTerjangkau}<small>/${JUMLAH_KECAMATAN}</small>`)
+    }
   </div></section>`);
   const grafik: Record<Bagian, string> = {
     peta: petaLaporan(d, geo),
-    wilayah: tabelWilayah(d, geo),
+    wilayah: d.banten ? tabelWilayah({ ...d, ...d.banten } as DataLaporan, geo, d.kab) : tabelWilayah(d, geo),
     tren: trenHtml(d) + `<p class="lap-kecil">Angka di atas batang: jumlah kegiatan per bulan.</p>`,
     peserta: bar(d.kelasPeserta, { satuan: 'kegiatan', urut: false }) + terbesar(d),
     sasaran: bar(d.sasaran.slice(0, 10), { satuan: 'kegiatan' }),
@@ -146,8 +155,8 @@ function dokumen(d: DataLaporan, desk: Record<Bagian, string>, geo: Geo, p: Peri
     bentuk: `<div class="lap-dua"><div><h4>Bentuk kegiatan</h4>${bar(d.bentuk, { satuan: 'kegiatan' })}</div><div><h4>Cara pelaksanaan</h4>${bar(d.mode, { satuan: 'kegiatan' })}</div></div>`,
     mitra: bar(d.mitra.slice(0, 10), { satuan: 'kegiatan' }),
   };
-  BAGIAN.forEach(([k, judul], i) =>
-    blok.push(`<section class="lb lap-bag"><h2><span>${i + 1}</span>${judul}</h2>${grafik[k]}<div class="lap-tx"><h4>Deskripsi</h4><p>${esc(desk[k])}</p><div class="ai-slot" data-ai="${k}"></div></div></section>`),
+  BAGIAN.forEach(([k], i) =>
+    blok.push(`<section class="lb lap-bag"><h2><span>${i + 1}</span>${esc(judulBagian(k, d.kab))}</h2>${grafik[k]}<div class="lap-tx"><h4>Deskripsi</h4><p>${esc(desk[k])}</p><div class="ai-slot" data-ai="${k}"></div></div></section>`),
   );
   blok.push(`<section class="lb lap-teks" id="aiRek" hidden></section>`);
   const catatan = [
@@ -176,18 +185,18 @@ function terbesar(d: DataLaporan) {
     .join('')}</tbody></table>`;
 }
 
-function tabelWilayah(d: DataLaporan, geo: Geo) {
+function tabelWilayah(d: DataLaporan, geo: Geo, sorot?: string) {
   const urut = [...d.perWilayah].sort((a, b) => b.kegiatan - a.kegiatan || b.peserta - a.peserta);
   const mk = Math.max(1, ...urut.map((w) => w.kegiatan));
   const mp = Math.max(1, ...urut.map((w) => w.peserta));
   const mr = Math.max(0.1, ...urut.map((w) => w.per100rb));
   const sel = (v: number, mx: number, teks: string) =>
     `<td><span class="lkb"><i style="width:${v ? Math.max(1.5, (v / mx) * 100) : 0}%"></i></span><b>${teks}</b></td>`;
-  return `${petaKab(d, geo)}
+  return `${petaKab(d, geo, sorot)}
   <table class="lap-tabel lap-kab"><colgroup><col style="width:19%"><col style="width:18%"><col style="width:23%"><col style="width:20%"><col style="width:20%"></colgroup><thead><tr><th>Kabupaten/kota</th><th>Kegiatan</th><th>Peserta</th><th>Per 100 rb penduduk</th><th>Kecamatan terjangkau</th></tr></thead><tbody>${urut
     .map(
       (w) =>
-        `<tr${w.kegiatan ? '' : ' class="nol"'}><td class="nm">${esc(w.nama.replace('Kabupaten ', 'Kab. '))}</td>${sel(w.kegiatan, mk, angka(w.kegiatan))}${sel(w.peserta, mp, angka(w.peserta))}${sel(w.per100rb, mr, desimal(w.per100rb))}${sel(
+        `<tr class="${w.kegiatan ? '' : 'nol'}${sorot === w.nama ? ' sorot' : ''}"><td class="nm">${esc(w.nama.replace('Kabupaten ', 'Kab. '))}</td>${sel(w.kegiatan, mk, angka(w.kegiatan))}${sel(w.peserta, mp, angka(w.peserta))}${sel(w.per100rb, mr, desimal(w.per100rb))}${sel(
           w.kecTerjangkau,
           w.kecTotal,
           `${w.kecTerjangkau}/${w.kecTotal}`,
@@ -197,14 +206,18 @@ function tabelWilayah(d: DataLaporan, geo: Geo) {
   <p class="lap-kecil">Batang kegiatan, peserta, dan per 100 rb penduduk dibandingkan dengan kab/kota tertinggi; batang kecamatan menunjukkan porsi kecamatan di kab/kota itu yang sudah dijangkau. Penduduk: ${SUMBER_PENDUDUK}.</p>`;
 }
 
-function petaKab(d: DataLaporan, geo: Geo) {
+function petaKab(d: DataLaporan, geo: Geo, sorot?: string) {
   const r = petaSvg(geo, d, 'kegiatan', false, 'kabkota');
+  let svg = warnaSvg(r.svg);
+  // Laporan satu kab/kota: wilayah lain dipudarkan.
+  if (sorot)
+    svg = svg.replace(/<path ([^>]*?)data-nama="([^"]+)"/g, (m, a, n) => (n.split('|')[0] === sorot ? m : `<path opacity="0.3" ${a}data-nama="${n}"`));
   const bl = batasLegenda(r.maks);
   const leg =
     `<span class="lg"><i style="background:${KOSONG}"></i>0</span>` +
     bl.map((t, i) => `<span class="lg"><i style="background:${SKALA[r.maks <= SKALA.length ? kelas(i + 1, r.maks) : i]}"></i>${t}</span>`).join('') +
     `<span class="lg-unit">kegiatan per kab/kota</span>`;
-  return `<div class="peta lap-peta">${warnaSvg(r.svg)}</div><div class="legenda">${leg}</div>`;
+  return `<div class="peta lap-peta">${svg}</div><div class="legenda">${leg}</div>`;
 }
 
 // Warna ditulis langsung di elemen SVG supaya tetap benar saat diubah menjadi gambar untuk PDF.
@@ -230,7 +243,7 @@ function petaLaporan(d: DataLaporan, geo: Geo) {
 
 // ---------- PDF ----------
 
-async function unduhPdf(el: HTMLElement, b: HTMLButtonElement, p: Periode) {
+async function unduhPdf(el: HTMLElement, b: HTMLButtonElement, p: Periode, kab?: string) {
   if (sibuk) return;
   sibuk = true;
   const asli = b.innerHTML;
@@ -275,10 +288,10 @@ async function unduhPdf(el: HTMLElement, b: HTMLButtonElement, p: Periode) {
       doc.setPage(i);
       doc.setFontSize(8);
       doc.setTextColor(150, 146, 155);
-      doc.text(`SiPEDULIKU · Laporan edukasi ${/^(Tahun|Triwulan)/.test(labelPeriode(p)) ? labelPeriode(p) : `${tanggalPendek(p.dari)} – ${tanggalPendek(p.sampai)}`}`, M, 289);
+      doc.text(`SiPEDULIKU · Laporan edukasi ${kab ? kab + ' · ' : ''}${/^(Tahun|Triwulan)/.test(labelPeriode(p)) ? labelPeriode(p) : `${tanggalPendek(p.dari)} – ${tanggalPendek(p.sampai)}`}`, M, 289);
       doc.text(`Halaman ${i - 1} dari ${n - 1}`, 210 - M, 289, { align: 'right' });
     }
-    doc.save(`sipeduliku-laporan-${/^Triwulan/.test(labelPeriode(p)) ? labelPeriode(p).toLowerCase().replace(/\s+/g, '-') : `${p.dari}-sd-${p.sampai}`}.pdf`);
+    doc.save(`sipeduliku-laporan-${kab ? kab.toLowerCase().replace(/[^a-z]+/g, '-') + '-' : ''}${/^(Tahun|Triwulan)/.test(labelPeriode(p)) ? labelPeriode(p).toLowerCase().replace(/\s+/g, '-') : `${p.dari}-sd-${p.sampai}`}.pdf`);
     toast('PDF laporan diunduh.');
   } catch (e: any) {
     toast('Gagal membuat PDF: ' + (e?.message || e), 'galat');
@@ -288,4 +301,44 @@ async function unduhPdf(el: HTMLElement, b: HTMLButtonElement, p: Periode) {
     b.innerHTML = asli;
     sibuk = false;
   }
+}
+
+// Laporan satu kab/kota: peta kecamatan diperbesar ke wilayah itu.
+function zoomKab(el: HTMLElement, kab: string) {
+  const svg = el.querySelector<SVGSVGElement>('.lap-bag .lap-peta svg');
+  if (!svg) return;
+  const ps = [...svg.querySelectorAll<SVGGraphicsElement>('.wil')].filter((p) => p.dataset.nama!.split('|')[0] === kab);
+  if (!ps.length) return;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (const p of ps) {
+    const b = p.getBBox();
+    x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + b.width); y1 = Math.max(y1, b.y + b.height);
+  }
+  const pad = Math.max(x1 - x0, y1 - y0) * 0.08;
+  svg.setAttribute('viewBox', `${x0 - pad} ${y0 - pad} ${x1 - x0 + 2 * pad} ${y1 - y0 + 2 * pad}`);
+  svg.style.overflow = 'hidden';
+  svg.querySelectorAll<SVGElement>('.wil').forEach((p) => {
+    if (p.dataset.nama!.split('|')[0] !== kab) p.setAttribute('opacity', '0.25');
+  });
+  // Garis tetap tipis walau peta diperbesar.
+  svg.querySelectorAll<SVGElement>('path').forEach((p) => p.style.setProperty('vector-effect', 'non-scaling-stroke'));
+  svg.querySelectorAll('.pl').forEach((g) => g.remove()); // label kab/kota lain tidak relevan saat diperbesar
+  // Nama kecamatan di tengah masing-masing wilayah.
+  const fs = (x1 - x0) / 48;
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  for (const p of ps) {
+    const nm = p.dataset.nama!.split('|')[1];
+    if (!nm) continue;
+    const b = p.getBBox();
+    const t = document.createElementNS(ns, 'text');
+    t.setAttribute('x', String(b.x + b.width / 2));
+    t.setAttribute('y', String(b.y + b.height / 2));
+    t.setAttribute('text-anchor', 'middle');
+    t.setAttribute('dominant-baseline', 'middle');
+    t.setAttribute('style', `font-size:${fs}px;font-weight:600;fill:#1c1a1d;stroke:rgba(255,255,255,0.9);stroke-width:${fs / 4}px;paint-order:stroke;pointer-events:none`);
+    t.textContent = nm;
+    g.appendChild(t);
+  }
+  svg.appendChild(g);
 }

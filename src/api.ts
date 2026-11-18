@@ -89,6 +89,6 @@ export const api = {
   ekstrak: (b: { nama: string; teks?: string; gambar?: { mime: string; data: string }[] }) => req<{ isian: KegiatanInput; model: string }>('POST', '/api/ekstrak', b),
   insight: (dari: string, sampai: string, buat = false) =>
     req<{ insight: Insight | null }>(buat ? 'POST' : 'GET', `/api/insight?dari=${dari}&sampai=${sampai}`).then((r) => r.insight),
-  tafsirLaporan: (dari: string, sampai: string, buat = false) =>
-    req<{ tafsir: TafsirLaporan | null }>(buat ? 'POST' : 'GET', `/api/laporan?dari=${dari}&sampai=${sampai}`).then((r) => r.tafsir),
+  tafsirLaporan: (dari: string, sampai: string, buat = false, kab?: string) =>
+    req<{ tafsir: TafsirLaporan | null }>(buat ? 'POST' : 'GET', `/api/laporan?dari=${dari}&sampai=${sampai}${kab ? `&kab=${encodeURIComponent(kab)}` : ''}`).then((r) => r.tafsir),
 };

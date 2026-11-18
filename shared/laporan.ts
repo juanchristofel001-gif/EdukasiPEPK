@@ -4,15 +4,15 @@
 import { KABKOTA, type Kegiatan } from './schema.js';
 import { JUMLAH_KECAMATAN } from './kecamatan.js';
 import { statistik, dalamPeriode, namaBulan, tanggalPanjang, angka, type Periode, type Statistik } from './statistik.js';
-import { desimal, TAHUN_PENDUDUK } from './penduduk.js';
+import { desimal, TAHUN_PENDUDUK, PENDUDUK } from './penduduk.js';
 
 // Naikkan angka ini setiap kali isi laporan atau perintah AI berubah, supaya interpretasi lama ditulis ulang.
-export const VERSI_TAFSIR = 2;
+export const VERSI_TAFSIR = 3;
 
 // Penanda isi data satu periode: jumlah kegiatan + waktu perubahan terakhir.
 // Kalau ada kegiatan ditambah, diubah, atau dihapus, penanda ini berubah.
-export function sidikData(semua: Kegiatan[], p: Periode) {
-  const l = dalamPeriode(semua, p);
+export function sidikData(semua: Kegiatan[], p: Periode, kab?: string) {
+  const l = dalamPeriode(kab ? semua.filter((k) => k.kabkota === kab) : semua, p);
   return `${l.length}|${l.reduce((m, k) => (k.diubah > m ? k.diubah : m), '')}`;
 }
 
@@ -28,6 +28,13 @@ export const BAGIAN = [
 ] as const;
 export type Bagian = (typeof BAGIAN)[number][0];
 
+// Judul bagian; laporan satu kab/kota memakai judul yang sedikit berbeda.
+export function judulBagian(k: Bagian, kab?: string) {
+  if (kab && k === 'peta') return `Sebaran kecamatan di ${kab}`;
+  if (kab && k === 'wilayah') return 'Posisi dibanding kabupaten/kota lain';
+  return BAGIAN.find(([x]) => x === k)![1];
+}
+
 export const KELAS_PESERTA = ['1–50', '51–100', '101–250', '251–500', '501–1.000', 'Di atas 1.000'] as const;
 const BATAS = [50, 100, 250, 500, 1000, Infinity];
 
@@ -40,6 +47,8 @@ export type DataLaporan = Statistik & {
   porsiTerbesar: number; // % peserta dari 5 kegiatan terbesar
   mitra: [string, number][];
   tanpaMitra: number;
+  kab?: string; // diisi untuk laporan satu kabupaten/kota
+  banten?: Statistik; // statistik seluruh Banten pada periode yang sama (pembanding)
 };
 
 // Penyamaan nama mitra yang hanya beda huruf besar/kecil atau spasi (mis. "UNTIRTA" dan "Untirta").
@@ -47,7 +56,8 @@ function kunciMitra(s: string) {
   return s.replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
-export function dataLaporan(semua: Kegiatan[], p: Periode): DataLaporan {
+export function dataLaporan(semuaBanten: Kegiatan[], p: Periode, kab?: string): DataLaporan {
+  const semua = kab ? semuaBanten.filter((k) => k.kabkota === kab) : semuaBanten;
   const st = statistik(semua, p);
   const list = dalamPeriode(semua, p);
   const hitung = (f: (k: Kegiatan) => string) => {
@@ -81,6 +91,26 @@ export function dataLaporan(semua: Kegiatan[], p: Periode): DataLaporan {
     porsiTerbesar: st.peserta ? Math.round((top5 / st.peserta) * 100) : 0,
     mitra: [...mitraMap.entries()].map(([k, n]): [string, number] => [tampilan.get(k)!, n]).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])),
     tanpaMitra: list.filter((k) => !(k.pengundang || '').trim()).length,
+    ...(kab ? { kab, banten: statistik(semuaBanten, p) } : {}),
+  };
+}
+
+// Peringkat dan porsi satu kab/kota terhadap seluruh Banten.
+export function posisiKab(d: DataLaporan) {
+  if (!d.kab || !d.banten) return null;
+  const b = d.banten;
+  const w = b.perWilayah.find((x) => x.nama === d.kab)!;
+  const peringkat = (f: (x: (typeof b.perWilayah)[number]) => number) => 1 + b.perWilayah.filter((x) => f(x) > f(w)).length;
+  const totalPenduduk = Object.values(PENDUDUK).reduce((a, n) => a + n, 0);
+  const keg8 = b.perWilayah.reduce((a, x) => a + x.kegiatan, 0);
+  return {
+    w,
+    rankKegiatan: peringkat((x) => x.kegiatan),
+    rankPeserta: peringkat((x) => x.peserta),
+    rankPenduduk: peringkat((x) => x.per100rb),
+    porsiKegiatan: persen(w.kegiatan, b.kegiatan),
+    porsiPeserta: persen(w.peserta, b.peserta),
+    rataBanten: totalPenduduk ? Math.round((keg8 / totalPenduduk) * 1_000_000) / 10 : 0,
   };
 }
 
@@ -100,12 +130,23 @@ export function deskripsi(d: DataLaporan): Record<Bagian, string> {
   const kecil = d.kelasPeserta.slice(0, 3).reduce((s, [, n]) => s + n, 0);
   const berpeserta = d.kelasPeserta.reduce((s, [, n]) => s + n, 0);
   const t = d.terbesar[0];
+  const pos = posisiKab(d);
+  const kecBelum = d.kab ? d.perKecamatan.filter((c) => c.kab === d.kab && !c.kegiatan).map((c) => c.nama) : [];
   const out: Record<Bagian, string> = {
-    peta:
+    peta: pos
+      ? `${pos.w.kecTerjangkau} dari ${pos.w.kecTotal} kecamatan di ${d.kab} (${persen(pos.w.kecTerjangkau, pos.w.kecTotal)}%) sudah memiliki setidaknya satu kegiatan.` +
+        (kecTop.length ? ` Terbanyak di ${daftar(kecTop.slice(0, 3).map((c) => `${c.nama} (${c.kegiatan})`))}.` : '') +
+        (kecBelum.length ? ` Belum dijangkau: ${daftar(kecBelum.slice(0, 15))}${kecBelum.length > 15 ? ` dan ${kecBelum.length - 15} kecamatan lain` : ''}.` : '') +
+        (d.tanpaKecamatan ? ` Sebanyak ${d.tanpaKecamatan} kegiatan belum dicatat kecamatannya sehingga tidak tampak di peta ini.` : '')
+      :
       `${d.kecamatanTerjangkau} dari ${JUMLAH_KECAMATAN} kecamatan di Banten (${persen(d.kecamatanTerjangkau, JUMLAH_KECAMATAN)}%) sudah memiliki setidaknya satu kegiatan.` +
       (kecTop.length ? ` Kecamatan dengan kegiatan terbanyak: ${daftar(kecTop.slice(0, 3).map((c) => `${c.nama}, ${pendek(c.kab)} (${c.kegiatan})`))}.` : '') +
       (d.tanpaKecamatan ? ` Sebanyak ${d.tanpaKecamatan} kegiatan belum dicatat kecamatannya sehingga tidak tampak di peta ini.` : ''),
-    wilayah:
+    wilayah: pos
+      ? `${d.kab} mencatat ${pos.w.kegiatan} kegiatan (${pos.porsiKegiatan}% dari seluruh kegiatan di Banten), peringkat ${pos.rankKegiatan} dari ${KABKOTA.length} kabupaten/kota, ` +
+        `dan ${angka(pos.w.peserta)} peserta (peringkat ${pos.rankPeserta}). ` +
+        `Dibandingkan jumlah penduduk (${TAHUN_PENDUDUK}), angkanya ${desimal(pos.w.per100rb)} kegiatan per 100 ribu penduduk (peringkat ${pos.rankPenduduk}; rata-rata Banten ${desimal(pos.rataBanten)}).`
+      :
       `Kegiatan menjangkau ${d.wilayahTerjangkau} dari ${KABKOTA.length} kabupaten/kota.` +
       (ada.length ? ` Terbanyak di ${daftar(ada.slice(0, 3).map((w) => `${w.nama} (${w.kegiatan} kegiatan, ${angka(w.peserta)} peserta)`))}.` : '') +
       (belum.length ? ` Belum ada kegiatan di ${daftar(belum.map((w) => w.nama))}.` : '') +
@@ -148,15 +189,31 @@ export function deskripsi(d: DataLaporan): Record<Bagian, string> {
 
 // Ringkasan angka yang dikirim ke AI (tanpa daftar kegiatan lengkap).
 export function bahanAi(d: DataLaporan) {
+  const pos = posisiKab(d);
   return {
+    ...(pos
+      ? {
+          fokusLaporan: d.kab,
+          posisiDibandingKabKotaLain: {
+            peringkatKegiatan: `${pos.rankKegiatan}/${KABKOTA.length}`,
+            peringkatPeserta: `${pos.rankPeserta}/${KABKOTA.length}`,
+            peringkatPerPenduduk: `${pos.rankPenduduk}/${KABKOTA.length}`,
+            porsiKegiatanDariBanten: pos.porsiKegiatan + '%',
+            kegiatanPer100rbPenduduk: pos.w.per100rb,
+            rataRataBantenPer100rb: pos.rataBanten,
+          },
+          kecamatanBelumDijangkau: d.perKecamatan.filter((c) => c.kab === d.kab && !c.kegiatan).map((c) => c.nama),
+        }
+      : {}),
     periode: d.periode,
     kegiatan: d.kegiatan,
     peserta: d.peserta,
     pesertaAdaPerkiraan: d.adaPerkiraan,
-    kabkotaTerjangkau: `${d.wilayahTerjangkau}/${KABKOTA.length}`,
-    kecamatanTerjangkau: `${d.kecamatanTerjangkau}/${JUMLAH_KECAMATAN}`,
+    ...(pos
+      ? { kecamatanTerjangkau: `${pos.w.kecTerjangkau}/${pos.w.kecTotal}` }
+      : { kabkotaTerjangkau: `${d.wilayahTerjangkau}/${KABKOTA.length}`, kecamatanTerjangkau: `${d.kecamatanTerjangkau}/${JUMLAH_KECAMATAN}` }),
     kegiatanTanpaKecamatan: d.tanpaKecamatan,
-    perWilayah: d.perWilayah.map((w) => ({ nama: w.nama, kegiatan: w.kegiatan, peserta: w.peserta, kecamatan: `${w.kecTerjangkau}/${w.kecTotal}`, penduduk: w.penduduk, kegiatanPer100rbPenduduk: w.per100rb })),
+    [pos ? 'perWilayahSeluruhBanten' : 'perWilayah']: (d.banten || d).perWilayah.map((w) => ({ nama: w.nama, kegiatan: w.kegiatan, peserta: w.peserta, kecamatan: `${w.kecTerjangkau}/${w.kecTotal}`, penduduk: w.penduduk, kegiatanPer100rbPenduduk: w.per100rb })),
     kecamatanTeratas: d.perKecamatan.filter((c) => c.kegiatan).sort((a, b) => b.kegiatan - a.kegiatan).slice(0, 10).map((c) => `${c.nama}, ${c.kab}: ${c.kegiatan}`),
     perBulan: d.perBulan,
     kelasPeserta: d.kelasPeserta,

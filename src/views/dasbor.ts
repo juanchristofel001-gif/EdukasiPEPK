@@ -124,7 +124,7 @@ function isi(s: Statistik, sAll: Statistik, semua: Kegiatan[], p: Periode, h: st
       <span class="hero-lbl">Kegiatan edukasi keuangan${wk ? ` · ${esc(wk.nama)}` : ''}</span>
       <b class="hero-angka">${angka(s.kegiatan)}</b>
       <span class="hero-sub">${s.kegiatan ? `Kegiatan terakhir ${tanggalPanjang(semua.filter((k) => k.tanggal >= p.dari && k.tanggal <= p.sampai)[0].tanggal)}` : 'Belum ada kegiatan di periode ini'}</span>
-      <div class="hero-aksi"><button class="btn putih" id="salin">${IKON.salin}Salin status</button><a class="btn kaca" href="#/laporan?dari=${p.dari}&sampai=${p.sampai}">${IKON.file}Buat laporan PDF${wk ? ' (seluruh Banten)' : ''}</a><a class="btn kaca" href="#/unggah">${IKON.unggah}Unggah laporan</a></div>
+      <div class="hero-aksi"><button class="btn putih" id="salin">${IKON.salin}Salin status</button><a class="btn kaca" href="#/laporan?dari=${p.dari}&sampai=${p.sampai}${wk ? `&kab=${encodeURIComponent(wk.nama)}` : ''}">${IKON.file}Buat laporan PDF${wk ? ` ${esc(wk.nama.replace('Kabupaten ', 'Kab. '))}` : ''}</a><a class="btn kaca" href="#/unggah">${IKON.unggah}Unggah laporan</a></div>
     </div>
     <div class="hero-stat">
       <div><span>${IKON.orang}Peserta</span><b>${s.adaPerkiraan ? '<small>±</small>' : ''}${angka(s.peserta)}</b></div>

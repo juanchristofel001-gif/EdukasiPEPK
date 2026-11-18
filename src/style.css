@@ -535,3 +535,5 @@ input.ro { color: var(--mute); }
 .kontrol-periode { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .sp-meta dd small { font-weight: 500; color: var(--mute); font-size: 12px; }
 @media (max-width: 720px) { .kontrol-periode { align-items: stretch; } .kontrol-periode .seg { overflow-x: auto; } }
+.lap-kab tr.sorot td { background: var(--birut); }
+.lap-kab tr.sorot td.nm { color: var(--biru); }

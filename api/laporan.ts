@@ -6,8 +6,8 @@
 import { izinkan, fail, ok, type Req, type Res } from './_lib/http.js';
 import { db, aktif, DbError } from './_lib/db.js';
 import { generateJson, GeminiError } from './_lib/gemini.js';
-import { isTanggal } from '../shared/schema.js';
-import { dataLaporan, deskripsi, bahanAi, sidikData, BAGIAN, VERSI_TAFSIR, type Bagian } from '../shared/laporan.js';
+import { isTanggal, KABKOTA } from '../shared/schema.js';
+import { dataLaporan, deskripsi, bahanAi, sidikData, judulBagian, BAGIAN, VERSI_TAFSIR, type Bagian } from '../shared/laporan.js';
 import { labelPeriode } from '../shared/statistik.js';
 
 export type TafsirLaporan = {
@@ -27,22 +27,25 @@ export default async function handler(req: Req, res: Res) {
   const dari = String(req.query.dari || ''),
     sampai = String(req.query.sampai || '');
   if (!isTanggal(dari) || !isTanggal(sampai) || dari > sampai) return fail(res, 400, 'Periode tidak valid.');
-  const key = `laporan_${dari}_${sampai}`;
+  const kab = String(req.query.kab || '') || undefined;
+  if (kab && !(KABKOTA as readonly string[]).includes(kab)) return fail(res, 400, 'Kabupaten/kota tidak dikenal.');
+  const key = `laporan_${dari}_${sampai}` + (kab ? '_' + kab.toLowerCase().replace(/[^a-z]+/g, '-') : '');
   try {
     const s = await db();
     if (req.method === 'GET') return ok(res, { tafsir: await s.getMeta(key) });
     if (req.method !== 'POST') return fail(res, 405, 'Metode tidak didukung.');
 
     const semua = await aktif();
-    const d = dataLaporan(semua, { dari, sampai });
+    const d = dataLaporan(semua, { dari, sampai }, kab);
     if (!d.kegiatan) return fail(res, 400, 'Belum ada kegiatan di periode ini.');
     const desk = deskripsi(d);
     const prompt = `Kamu analis program edukasi keuangan OJK Provinsi Banten dan sedang menulis laporan untuk pimpinan.
-Data rekap kegiatan periode ${labelPeriode({ dari, sampai })} (${dari} s.d. ${sampai}) (JSON):
+${kab ? `Laporan ini KHUSUS untuk ${kab}; bandingkan dengan kabupaten/kota lain bila relevan, dan beri rekomendasi untuk wilayah ini (mis. kecamatan yang belum dijangkau).
+` : ''}Data rekap kegiatan periode ${labelPeriode({ dari, sampai })} (${dari} s.d. ${sampai}) (JSON):
 ${JSON.stringify(bahanAi(d))}
 
 Laporan berisi grafik berikut, masing-masing sudah punya DESKRIPSI angka (jangan diulang mentah-mentah):
-${BAGIAN.map(([k, t]) => `- ${k} (${t}): ${desk[k]}`).join('\n')}
+${BAGIAN.map(([k]) => `- ${k} (${judulBagian(k, kab)}): ${desk[k]}`).join('\n')}
 
 Tulis dalam bahasa Indonesia baku yang lugas. Jawab HANYA JSON:
 {"ringkasan":"3-4 kalimat kondisi umum untuk pimpinan, dengan angka utama",
@@ -79,7 +82,7 @@ Aturan:
       model,
       jumlahData: d.kegiatan,
       versi: VERSI_TAFSIR,
-      sidik: sidikData(semua, { dari, sampai }),
+      sidik: sidikData(semua, { dari, sampai }, kab),
       ringkasan: String(out?.ringkasan || '').slice(0, 1200),
       sorotan: list(out?.sorotan, 6),
       interpretasi: Object.fromEntries(BAGIAN.map(([k]) => [k, String(out?.interpretasi?.[k] || '').slice(0, 800)]).filter(([, v]) => v)),
