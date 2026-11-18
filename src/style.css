@@ -574,3 +574,24 @@ input.ro { color: var(--mute); }
 .lw-kepala .sub { margin: 0; flex: 1; min-width: 220px; }
 .lw-lipat .aksi { margin-top: 14px; }
 @media (max-width: 860px) { .cara { grid-template-columns: 1fr; } .cara-k { flex-direction: row; flex-wrap: wrap; align-items: center; } .cara-k > span:last-child { flex-basis: 100%; } .cara-ikon { margin: 0; } }
+
+/* ---------- Formulir: kelompok dan dropdown pilih-banyak ---------- */
+.kform .bag { border: 0; margin: 0; padding: 18px 0 20px; border-top: 1px solid var(--line); min-width: 0; }
+.kform .bag:first-child { border-top: 0; padding-top: 4px; }
+.kform .bag legend { float: left; width: 100%; padding: 0; margin-bottom: 12px; font-size: 14px; font-weight: 700; color: var(--ink); }
+.kform .bag legend + .grid { clear: both; }
+.multi { position: relative; }
+.multi > summary { list-style: none; display: flex; align-items: center; gap: 8px; min-height: 42px; padding: 7px 36px 7px 10px; background: var(--field); border: 1.5px solid transparent; border-radius: 12px; cursor: pointer; font-size: 14px; position: relative; }
+.multi > summary::-webkit-details-marker { display: none; }
+.multi > summary::after { content: ''; position: absolute; right: 14px; top: 50%; width: 7px; height: 7px; border-right: 2px solid var(--mute); border-bottom: 2px solid var(--mute); transform: translateY(-70%) rotate(45deg); }
+.multi[open] > summary { border-color: var(--biru); background: #fff; }
+.multi > summary:focus-visible { outline: 2px solid var(--biru); outline-offset: 2px; }
+.multi-nilai { display: flex; flex-wrap: wrap; gap: 5px; min-width: 0; }
+.multi-nilai .multi-ph { color: var(--faint); font-weight: 500; padding-left: 2px; }
+.multi-nilai .tag { background: var(--birut); color: var(--biru); font-size: 12.5px; font-weight: 600; padding: 3px 9px; border-radius: 8px; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.multi-panel { margin-top: 6px; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 4px 14px rgba(40, 20, 30, 0.06); padding: 6px; max-height: 280px; overflow-y: auto; }
+.multi-cari { margin: 2px 0 6px; padding: 8px 10px; font-size: 13.5px; }
+.multi-op { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 9px; font-size: 13.5px; font-weight: 500; cursor: pointer; }
+.multi-op:hover { background: var(--field); }
+.multi-op input { width: 16px; height: 16px; flex: none; accent-color: var(--biru); }
+.multi-op[hidden] { display: none; }
