@@ -19,7 +19,10 @@ export default async function handler(req: Req, res: Res) {
   const prompt = `Kamu membantu merapikan rekap kegiatan edukasi keuangan OJK di Provinsi Banten.
 Setiap baris punya judul, tempat, kab/kota (dari file), dan "pengundang" (= Mitra Penyelenggara).
 Isi kolom yang diminta di "perlu". Untuk kecamatan, ikuti urutan ini:
-1. Kalau judul atau tempat menyebut desa/kelurahan/kecamatan/gedung yang kamu tahu letaknya, pakai itu.
+1. Kalau judul atau tempat menyebut tempat yang kamu tahu letaknya, pakai itu: desa/kelurahan/kecamatan, sekolah
+   (mis. "SMKN 1 Malimping"), kampus (mis. "PKN STAN", "UMN", "Universitas Pamulang Kampus Serang"), hotel, gedung,
+   atau kantor tertentu (mis. "Kantor Perwakilan BEI Banten"). Ini berlaku walaupun mitranya organisasi lain.
+   Kalau judul menyebut beberapa tempat di kecamatan berbeda, pilih yang pertama dan sebut di "dasar".
 2. Kalau tidak, pakai alamat MITRA PENYELENGGARA, tapi HANYA jika kegiatannya wajar diadakan di tempat mitra itu sendiri
    dan mitra itu punya satu alamat yang jelas: sekolah, kampus (pilih kampus yang cocok dengan kab/kota di file;
    kalau kampusnya lebih dari satu dan tidak jelas yang mana, kosongkan), pesantren, desa, kantor cabang tertentu.
