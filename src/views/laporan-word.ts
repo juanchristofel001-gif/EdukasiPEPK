@@ -125,30 +125,58 @@ const xmlEsc = (t: string) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').rep
 const FONT = '<w:rFonts w:ascii="Bookman Old Style" w:hAnsi="Bookman Old Style"/><w:lang w:val="id-ID"/>';
 const EMU_CM = 360000;
 
+// Semua foto tampil seukuran 7,4 × 5,55 cm (4:3); kelebihan sisi dipotong dari tengah.
+const LEBAR_FOTO = 7.4 * EMU_CM,
+  TINGGI_FOTO = 5.55 * EMU_CM;
+
+function potongTengah(f: Foto) {
+  const target = LEBAR_FOTO / TINGGI_FOTO,
+    rasio = f.w / f.h;
+  if (Math.abs(rasio - target) < 0.01) return '';
+  if (rasio > target) {
+    const s = Math.round(((1 - target / rasio) / 2) * 100000);
+    return `<a:srcRect l="${s}" r="${s}"/>`;
+  }
+  const s = Math.round(((1 - rasio / target) / 2) * 100000);
+  return `<a:srcRect t="${s}" b="${s}"/>`;
+}
+
 function gambarXml(f: Foto, n: number) {
-  // Muat dalam kotak 7,4 × 5,6 cm dengan perbandingan sisi asli.
-  const s = Math.min((7.4 * EMU_CM) / f.w, (5.6 * EMU_CM) / f.h);
-  const cx = Math.round(f.w * s),
-    cy = Math.round(f.h * s);
-  return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${1000 + n}" name="Foto ${n}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${1000 + n}" name="foto${n}.jpeg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdFoto${n}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+  const cx = Math.round(LEBAR_FOTO),
+    cy = Math.round(TINGGI_FOTO);
+  return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${1000 + n}" name="Foto ${n}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="${1000 + n}" name="foto${n}.jpeg"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdFoto${n}"/>${potongTengah(f)}<a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
 }
 
 function halamanFoto(foto: Foto[]) {
   if (!foto.length) return '';
-  const sel = (f: Foto | undefined, n: number) =>
-    `<w:tc><w:tcPr><w:tcW w:w="4513" w:type="dxa"/></w:tcPr>${
-      f
-        ? `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="60"/></w:pPr>${gambarXml(f, n)}</w:p><w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="160"/></w:pPr>${
-            f.ket.trim() ? `<w:r><w:rPr>${FONT}<w:i/><w:sz w:val="20"/></w:rPr><w:t xml:space="preserve">${xmlEsc(f.ket.trim())}</w:t></w:r>` : ''
-          }</w:p>`
-        : '<w:p/>'
-    }</w:tc>`;
+  const run = (t: string, tebal = false) =>
+    `<w:r><w:rPr>${FONT}${tebal ? '<w:b/><w:bCs/>' : ''}<w:sz w:val="20"/><w:szCs w:val="20"/></w:rPr><w:t xml:space="preserve">${xmlEsc(t)}</w:t></w:r>`;
+  const tc = (isi: string, span: number, latar?: string) =>
+    `<w:tc><w:tcPr><w:tcW w:w="${4513 * span}" w:type="dxa"/>${span > 1 ? `<w:gridSpan w:val="${span}"/>` : ''}${
+      latar ? `<w:shd w:val="clear" w:color="auto" w:fill="${latar}"/>` : ''
+    }<w:vAlign w:val="center"/></w:tcPr>${isi}</w:tc>`;
+  const selFoto = (f: Foto, n: number, span: number) =>
+    tc(`<w:p><w:pPr><w:keepNext/><w:jc w:val="center"/><w:spacing w:before="100" w:after="100"/></w:pPr>${gambarXml(f, n)}</w:p>`, span);
+  const selKet = (f: Foto, n: number, span: number) =>
+    tc(
+      `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="60" w:after="60"/></w:pPr>${run(`Gambar ${n}`, true)}${
+        f.ket.trim() ? run(`. ${f.ket.trim()}`) : ''
+      }</w:p>`,
+      span,
+      'F2F2F2',
+    );
   let baris = '';
-  for (let i = 0; i < foto.length; i += 2) baris += `<w:tr><w:trPr><w:cantSplit/></w:trPr>${sel(foto[i], i + 1)}${sel(foto[i + 1], i + 2)}</w:tr>`;
+  for (let i = 0; i < foto.length; i += 2) {
+    const pasang = foto.slice(i, i + 2);
+    const span = pasang.length === 1 ? 2 : 1;
+    baris += `<w:tr><w:trPr><w:cantSplit/></w:trPr>${pasang.map((f, j) => selFoto(f, i + j + 1, span)).join('')}</w:tr>`;
+    baris += `<w:tr><w:trPr><w:cantSplit/></w:trPr>${pasang.map((f, j) => selKet(f, i + j + 1, span)).join('')}</w:tr>`;
+  }
+  const g = (t: string) => `<w:${t} w:val="single" w:sz="6" w:space="0" w:color="808080"/>`;
   return (
     `<w:p><w:r><w:br w:type="page"/></w:r></w:p>` +
     `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="240"/></w:pPr><w:r><w:rPr>${FONT}<w:b/><w:bCs/></w:rPr><w:t>DOKUMENTASI KEGIATAN</w:t></w:r></w:p>` +
-    `<w:tbl><w:tblPr><w:tblW w:w="9026" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders><w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/></w:tblBorders><w:tblLayout w:type="fixed"/><w:tblLook w:val="0000"/></w:tblPr><w:tblGrid><w:gridCol w:w="4513"/><w:gridCol w:w="4513"/></w:tblGrid>${baris}</w:tbl>`
+    `<w:tbl><w:tblPr><w:tblW w:w="9026" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders>${g('top')}${g('left')}${g('bottom')}${g('right')}${g('insideH')}${g('insideV')}</w:tblBorders><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="100" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar><w:tblLook w:val="0000"/></w:tblPr><w:tblGrid><w:gridCol w:w="4513"/><w:gridCol w:w="4513"/></w:tblGrid>${baris}</w:tbl>`
   );
 }
 
