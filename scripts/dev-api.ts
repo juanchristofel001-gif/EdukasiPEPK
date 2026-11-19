@@ -14,6 +14,7 @@ http
     const r = res as any;
     r.status = (c: number) => ((res.statusCode = c), r);
     r.json = (v: unknown) => (res.setHeader('Content-Type', 'application/json'), res.end(JSON.stringify(v)), r);
+    r.send = (v: unknown) => (res.end(v as any), r);
     if (url.pathname.startsWith('/api/')) {
       const name = url.pathname.slice(5).replace(/[^a-z]/g, '');
       let mod: any;

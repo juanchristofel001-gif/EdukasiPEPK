@@ -69,6 +69,7 @@ export default async function handler(req: Req, res: Res) {
           if (!k.dihapus) return fail(res, 400, 'Pindahkan ke sampah dulu sebelum menghapus permanen.');
           await s.remove(id);
           await catat({ aksi: 'hapus-permanen', oleh, kegiatanId: k.id, judul: k.judul });
+          for (const f of await s.fotoDaftar(k.id)) await s.fotoHapus(f.id); // foto ikut terhapus
           return ok(res, { dihapus: id, permanen: true });
         }
         await s.put({ ...k, dihapus: new Date().toISOString() });

@@ -4,7 +4,8 @@ import { api, nama } from '../api.js';
 import { periksa, type KegiatanInput } from '../../shared/schema.js';
 import { esc, $, toast } from '../ui.js';
 import { formHtml, bacaForm, tampilGalat, pasangForm } from './form.js';
-import { kartuLaporanWord, pasangLaporanWord, naskahDiLayar, type Foto } from './laporan-word.js';
+import { kartuLaporanWord, pasangLaporanWord, naskahDiLayar } from './laporan-word.js';
+import { kartuFoto, pasangFoto, unggahFoto, type Foto } from './foto.js';
 import { IKON } from '../ikon.js';
 import { segarkanData } from '../data.js';
 import { siapkan } from '../baca-file.js';
@@ -69,7 +70,7 @@ function gambar() {
       if (x.status === 'baca') return `<section class="kartu item" data-id="${x.id}">${head}<div class="memuat"><i></i><i></i><i></i></div></section>`;
       if (x.status === 'gagal')
         return `<section class="kartu item" data-id="${x.id}">${head}<p class="galat">${esc(x.galat)}</p><div class="aksi"><button class="btn" data-isi="${x.id}">Isi manual</button></div></section>`;
-      const lw = kartuLaporanWord(x.isian!.naskah, x.isian!.tanggal, { lipat: true, foto: (x.foto ||= []) });
+      const lw = kartuFoto((x.foto ||= [])) + kartuLaporanWord(x.isian!.naskah, x.isian!.tanggal, { lipat: true });
       return `<section class="kartu item" data-id="${x.id}">${head}${formHtml(x.isian!, { tandaiAi: !!x.nama })}${x.buka ? lw.replace('<details class="lw lw-lipat"', '<details class="lw lw-lipat" open') : lw}<div class="aksi"><button class="btn" data-simpan="${x.id}">Simpan kegiatan</button><button type="button" class="btn utama lw-unduh">${IKON.unduh}Simpan & unduh .docx</button></div></section>`;
     })
     .join('');
@@ -84,14 +85,16 @@ function gambar() {
       form,
       () => it.isian!,
       async (isian) => {
-        await api.simpan(isian);
+        const k = await api.simpan(isian);
         it.status = 'tersimpan';
-        toast(`Tersimpan: ${isian.judul}`);
+        await simpanFotoBaru(it, k.id, isian.judul);
         await segarkanData();
         setTimeout(gambar, 1500);
       },
       { kecamatanWajib: true, foto: (it.foto ||= []) },
     );
+    const fb = elItem.querySelector<HTMLElement>('[data-foto-blok]');
+    if (fb) pasangFoto(fb, (it.foto ||= []));
   });
   box.onclick = async (e) => {
     const t = e.target as HTMLElement;
@@ -119,6 +122,18 @@ function kosong(namaFile: string): KegiatanInput {
   };
 }
 
+// Setelah kegiatan baru tersimpan, unggah fotonya. Kegiatan tetap tersimpan walau foto gagal.
+async function simpanFotoBaru(it: Item, kegiatanId: string, judul: string) {
+  const n = it.foto?.length || 0;
+  try {
+    if (n) await unggahFoto(it.foto!, kegiatanId);
+    toast(`Tersimpan: ${judul}${n ? ` (dengan ${n} foto)` : ''}`);
+  } catch (e: any) {
+    const gagal = it.foto!.filter((f) => !f.serverId).length;
+    toast(`Kegiatan tersimpan, tetapi ${gagal} foto gagal diunggah (${e.message}). Tambahkan lewat halaman kegiatan.`, 'galat');
+  }
+}
+
 async function simpanItem(id: number, btn: HTMLButtonElement) {
   const it = antrean.find((x) => x.id === id);
   const form = $<HTMLFormElement>(`.item[data-id="${id}"] form`);
@@ -130,9 +145,9 @@ async function simpanItem(id: number, btn: HTMLButtonElement) {
   btn.disabled = true;
   btn.textContent = 'Menyimpan…';
   try {
-    await api.simpan(isian);
+    const k = await api.simpan(isian);
     it.status = 'tersimpan';
-    toast(`Tersimpan: ${isian.judul}`);
+    await simpanFotoBaru(it, k.id, isian.judul);
     await segarkanData();
     gambar();
   } catch (e: any) {

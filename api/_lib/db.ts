@@ -16,6 +16,11 @@ export class DbError extends Error {
 type Meta = Record<string, unknown>;
 export type Cadangan = { tanggal: string; dibuat: string; jumlah: number; kegiatan: Kegiatan[] };
 
+// Foto dokumentasi kegiatan: satu dokumen per foto (JPEG, base64, maks. ~900 KB) di koleksi terpisah,
+// supaya daftar kegiatan tetap ringan. Hanya bisa diambil lewat API dengan kode akses.
+export type FotoMeta = { id: string; kegiatanId: string; urutan: number; ket: string; w: number; h: number; dibuat: string; oleh: string };
+export type FotoDok = FotoMeta & { data: string };
+
 // Kegiatan yang dihapus tidak langsung hilang: diberi tanda `dihapus` (waktu) dan masuk sampah.
 type Baris = Kegiatan & { dihapus?: string | null };
 
@@ -32,6 +37,11 @@ interface Store {
   hapusCadangan(tanggal: string): Promise<void>;
   catat(r: Riwayat): Promise<void>;
   riwayat(batas: number): Promise<Riwayat[]>; // terbaru dulu
+  fotoDaftar(kegiatanId: string): Promise<FotoMeta[]>; // tanpa isi gambar, urut
+  fotoAmbil(id: string): Promise<FotoDok | null>;
+  fotoSimpan(f: FotoDok): Promise<void>;
+  fotoUbah(id: string, ubah: Partial<Pick<FotoMeta, 'ket' | 'urutan'>>): Promise<boolean>;
+  fotoHapus(id: string): Promise<boolean>;
 }
 
 let store: Store | null = null;
@@ -97,6 +107,29 @@ async function firestore(): Promise<Store> {
       const s = await db.collection('riwayat').orderBy('waktu', 'desc').limit(batas).get();
       return s.docs.map((d) => d.data() as Riwayat);
     },
+    async fotoDaftar(kegiatanId) {
+      const s = await db.collection('foto').where('kegiatanId', '==', kegiatanId).select('id', 'kegiatanId', 'urutan', 'ket', 'w', 'h', 'dibuat', 'oleh').get();
+      return s.docs.map((d) => d.data() as FotoMeta).sort((a, b) => a.urutan - b.urutan || a.dibuat.localeCompare(b.dibuat));
+    },
+    async fotoAmbil(id) {
+      const d = await db.collection('foto').doc(id).get();
+      return d.exists ? (d.data() as FotoDok) : null;
+    },
+    async fotoSimpan(f) {
+      await db.collection('foto').doc(f.id).set(f);
+    },
+    async fotoUbah(id, ubah) {
+      const ref = db.collection('foto').doc(id);
+      if (!(await ref.get()).exists) return false;
+      await ref.update(ubah);
+      return true;
+    },
+    async fotoHapus(id) {
+      const ref = db.collection('foto').doc(id);
+      if (!(await ref.get()).exists) return false;
+      await ref.delete();
+      return true;
+    },
   };
 }
 
@@ -124,6 +157,7 @@ function lokal(): Store {
   };
   const cfile = path.join(dir, 'cadangan.json');
   const rfile = path.join(dir, 'riwayat.json');
+  const ffile = path.join(dir, 'foto.json');
   return {
     async semua() {
       return read<Baris[]>(file, []);
@@ -188,6 +222,40 @@ function lokal(): Store {
     },
     async riwayat(batas) {
       return (await read<Riwayat[]>(rfile, [])).sort((a, b) => b.waktu.localeCompare(a.waktu)).slice(0, batas);
+    },
+    async fotoDaftar(kegiatanId) {
+      return Object.values(await read<Record<string, FotoDok>>(ffile, {}))
+        .filter((f) => f.kegiatanId === kegiatanId)
+        .map(({ data, ...m }) => m)
+        .sort((a, b) => a.urutan - b.urutan || a.dibuat.localeCompare(b.dibuat));
+    },
+    async fotoAmbil(id) {
+      return (await read<Record<string, FotoDok>>(ffile, {}))[id] || null;
+    },
+    fotoSimpan(f) {
+      return urutan(async () => {
+        const m = await read<Record<string, FotoDok>>(ffile, {});
+        m[f.id] = f;
+        await write(ffile, m);
+      });
+    },
+    fotoUbah(id, ubah) {
+      return urutan(async () => {
+        const m = await read<Record<string, FotoDok>>(ffile, {});
+        if (!m[id]) return false;
+        Object.assign(m[id], ubah);
+        await write(ffile, m);
+        return true;
+      });
+    },
+    fotoHapus(id) {
+      return urutan(async () => {
+        const m = await read<Record<string, FotoDok>>(ffile, {});
+        if (!m[id]) return false;
+        delete m[id];
+        await write(ffile, m);
+        return true;
+      });
     },
   };
 }

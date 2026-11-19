@@ -9,37 +9,8 @@ import { bacaForm, tampilGalat } from './form.js';
 
 type Ttd = { tempat: string; jabatan: string; nama: string };
 
-// Foto dokumentasi: hanya ada di browser dan langsung dimasukkan ke .docx; TIDAK disimpan di server
-// (foto kegiatan sering memuat wajah peserta).
-export type Foto = { id: number; blob: Blob; url: string; w: number; h: number; ket: string };
-const MAKS_FOTO = 8;
-let nomorFoto = 0;
+import type { Foto } from './foto.js';
 
-// Perkecil foto (sisi terpanjang 1600 px, JPEG) supaya .docx tetap ringan; orientasi kamera diikuti.
-async function siapkanFoto(f: File): Promise<Foto> {
-  const bmp = await createImageBitmap(f, { imageOrientation: 'from-image' } as ImageBitmapOptions);
-  const skala = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
-  const w = Math.round(bmp.width * skala),
-    h = Math.round(bmp.height * skala);
-  const c = document.createElement('canvas');
-  c.width = w;
-  c.height = h;
-  c.getContext('2d')!.drawImage(bmp, 0, 0, w, h);
-  bmp.close?.();
-  const blob = await new Promise<Blob>((ok, gagal) => c.toBlob((b) => (b ? ok(b) : gagal(new Error('Foto tidak bisa diproses.'))), 'image/jpeg', 0.85));
-  return { id: ++nomorFoto, blob, url: URL.createObjectURL(blob), w, h, ket: '' };
-}
-
-const fotoHtml = (foto: Foto[]) =>
-  foto
-    .map(
-      (f, i) =>
-        `<figure class="lwf" data-foto="${f.id}"><img src="${f.url}" alt="Foto ${i + 1}"><button type="button" class="lwf-hapus" aria-label="Hapus foto ${i + 1}">×</button><input class="lwf-ket" value="${esc(f.ket)}" placeholder="Keterangan (opsional)" maxlength="120"></figure>`,
-    )
-    .join('') +
-  (foto.length < MAKS_FOTO
-    ? `<label class="lwf-tambah"><input type="file" accept="image/*" multiple class="lwf-file"><span>+</span>Tambah foto</label>`
-    : '');
 const KUNCI_TTD = 'sipeduliku:ttd';
 // Bawaan dari template laporan tim; bisa diubah di layar dan diingat per perangkat.
 const TTD_AWAL: Ttd = { tempat: 'Serang', jabatan: 'Manajer PEPK Kantor OJK Provinsi\nBanten', nama: 'Tubagus Aria Dwitama' };
@@ -53,7 +24,7 @@ function ttdTersimpan(): Ttd {
 
 // Bagian "Laporan Word" untuk satu kegiatan. Dipakai di halaman kegiatan dan di formulir Input data.
 // opt.lipat: tampil sebagai bagian yang bisa dibuka-tutup (formulir input), bukan kartu sendiri.
-export function kartuLaporanWord(n: Naskah | null, tanggal: string, opt: { lipat?: boolean; labelTombol?: string; foto?: Foto[] } = {}) {
+export function kartuLaporanWord(n: Naskah | null, tanggal: string, opt: { lipat?: boolean; labelTombol?: string } = {}) {
   const t = ttdTersimpan();
   const isi = `
   <div class="lw-kepala"><p class="sub">Naskah bagian A–E diisikan ke template laporan tim. Tulis dengan AI atau ketik sendiri, sunting, lalu unduh.</p>
@@ -62,8 +33,7 @@ export function kartuLaporanWord(n: Naskah | null, tanggal: string, opt: { lipat
   <div class="lw-isi">
     ${BAGIAN_NASKAH.map(([b, judul]) => `<label class="lw-bag"><span>${judul}</span><textarea data-lw="${b}" rows="${b === 'penutup' ? 2 : b === 'pelaksanaan' ? 3 : 4}">${esc(n?.[b] || '')}</textarea></label>`).join('')}
     <p class="lw-kecil">[NARASUMBER] otomatis diganti nama narasumber dari formulir. Tabel hari/tanggal, waktu, dan tempat diambil dari isian kegiatan.</p>
-    <div class="lw-foto"><div class="lwf-kepala"><span>Foto dokumentasi</span><small>Menjadi halaman 2 laporan (maks. ${MAKS_FOTO} foto). Foto hanya dipakai untuk file .docx dan tidak disimpan di SiPEDULIKU.</small></div>
-      <div class="lwf-grid">${fotoHtml(opt.foto || [])}</div></div>
+    <p class="lw-kecil">Foto dari bagian Foto dokumentasi otomatis menjadi halaman 2 laporan.</p>
     <fieldset class="lw-ttd"><legend>Tanda tangan</legend>
       <label><span>Ditetapkan di</span><input data-ttd="tempat" value="${esc(t.tempat)}"></label>
       <label><span>Pada tanggal</span><input data-ttd="tanggal" value="${tanggal ? esc(tanggalPanjang(tanggal)) : ''}" placeholder="mengikuti tanggal kegiatan"></label>
@@ -99,40 +69,6 @@ export function pasangLaporanWord(
     status.textContent = t;
     status.classList.toggle('galat', galat);
   };
-  // Foto dokumentasi: tambah, hapus, keterangan.
-  const grid = $('.lwf-grid', kartu);
-  const gambarFoto = () => (grid.innerHTML = fotoHtml(foto));
-  grid.addEventListener('change', async (e) => {
-    const inp = e.target as HTMLInputElement;
-    if (!inp.classList.contains('lwf-file') || !inp.files?.length) return;
-    const files = [...inp.files].slice(0, MAKS_FOTO - foto.length);
-    grid.classList.add('memproses');
-    for (const f of files) {
-      try {
-        foto.push(await siapkanFoto(f));
-      } catch {
-        tampil(`Foto "${f.name}" tidak bisa dibaca. Pakai JPG atau PNG.`, true);
-      }
-    }
-    grid.classList.remove('memproses');
-    if (inp.files.length > files.length) tampil(`Maksimal ${MAKS_FOTO} foto; sebagian foto tidak ditambahkan.`, true);
-    gambarFoto();
-  });
-  grid.addEventListener('click', (e) => {
-    const b = (e.target as HTMLElement).closest('.lwf-hapus');
-    if (!b) return;
-    const id = +b.closest<HTMLElement>('.lwf')!.dataset.foto!;
-    const i = foto.findIndex((f) => f.id === id);
-    if (i >= 0) URL.revokeObjectURL(foto.splice(i, 1)[0].url);
-    gambarFoto();
-  });
-  grid.addEventListener('input', (e) => {
-    const inp = e.target as HTMLInputElement;
-    if (!inp.classList.contains('lwf-ket')) return;
-    const f = foto.find((x) => x.id === +inp.closest<HTMLElement>('.lwf')!.dataset.foto!);
-    if (f) f.ket = inp.value;
-  });
-
   const tulis = $<HTMLButtonElement>('.lw-tulis', kartu);
   tulis.onclick = async () => {
     if (naskahDiLayar(kartu) && !confirm('Naskah yang sekarang akan diganti tulisan AI yang baru. Lanjutkan?')) return;

@@ -625,3 +625,9 @@ input.ro { color: var(--mute); }
 .lwf-tambah span { font-size: 22px; line-height: 1; color: var(--biru); }
 .lwf-tambah:hover, .lwf-tambah:focus-within { border-color: var(--biru); color: var(--biru); }
 .lwf-tambah input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.item .lw-foto { margin-top: 18px; }
+.lwf-kepala span { display: flex; align-items: center; gap: 7px; }
+.lwf-kepala span svg { width: 16px; height: 16px; color: var(--biru); }
+.lw-foto-kartu .lwf-kepala span { font-size: 15px; }
+.lwf-status { margin: 0 0 10px; padding: 8px 12px; border-radius: 10px; background: var(--birut); font-size: 13px; }
+.lwf-status.galat { background: var(--merah-t); color: var(--merah); }

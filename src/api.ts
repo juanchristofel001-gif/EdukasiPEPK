@@ -2,6 +2,7 @@
 import type { Kegiatan, KegiatanInput, Naskah, Riwayat } from '../shared/schema.js';
 import type { Insight } from '../api/insight.js';
 import type { TafsirLaporan } from '../api/laporan.js';
+import type { FotoMeta } from '../api/_lib/db.js';
 
 const KUNCI = 'edukasi-pepk:kode';
 
@@ -89,6 +90,16 @@ export const api = {
   ekstrak: (b: { nama: string; teks?: string; gambar?: { mime: string; data: string }[] }) => req<{ isian: KegiatanInput; model: string }>('POST', '/api/ekstrak', b),
   insight: (dari: string, sampai: string, buat = false) =>
     req<{ insight: Insight | null }>(buat ? 'POST' : 'GET', `/api/insight?dari=${dari}&sampai=${sampai}`).then((r) => r.insight),
+  fotoDaftar: (kegiatanId: string) => req<{ foto: FotoMeta[] }>('GET', '/api/foto?kegiatan=' + encodeURIComponent(kegiatanId)).then((r) => r.foto),
+  fotoUnggah: (f: { kegiatanId: string; data: string; w: number; h: number; ket: string }) => req<{ foto: FotoMeta }>('POST', '/api/foto', f).then((r) => r.foto),
+  fotoUbah: (id: string, ubah: { ket?: string; urutan?: number }) => req<{ diubah: string }>('PATCH', '/api/foto?id=' + encodeURIComponent(id), ubah),
+  fotoHapus: (id: string) => req<{ dihapus: string }>('DELETE', '/api/foto?id=' + encodeURIComponent(id)),
+  // Isi gambar diambil dengan kode akses lalu ditampilkan lewat URL lokal (foto tidak punya tautan publik).
+  fotoGambar: async (id: string) => {
+    const r = await fetch('/api/foto?id=' + encodeURIComponent(id), { headers: { 'x-kode-akses': kode.get() } });
+    if (!r.ok) throw new ApiError('Foto tidak bisa dimuat.', r.status);
+    return r.blob();
+  },
   naskah: (isian: KegiatanInput) => req<{ naskah: Naskah }>('POST', '/api/naskah', { isian }).then((r) => r.naskah),
   tafsirLaporan: (dari: string, sampai: string, buat = false, kab?: string) =>
     req<{ tafsir: TafsirLaporan | null }>(buat ? 'POST' : 'GET', `/api/laporan?dari=${dari}&sampai=${sampai}${kab ? `&kab=${encodeURIComponent(kab)}` : ''}`).then((r) => r.tafsir),
