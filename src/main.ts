@@ -13,6 +13,7 @@ import { viewSampah } from './views/sampah.js';
 import { viewRiwayat } from './views/riwayat.js';
 import { viewImpor } from './views/impor.js';
 import { viewLaporan } from './views/laporan.js';
+import { viewDokumentasi } from './views/dokumentasi.js';
 
 const app = $('#app');
 
@@ -20,6 +21,7 @@ const NAV = [
   ['#/dasbor', 'Dasbor', IKON.dasbor],
   ['#/unggah', 'Input data', IKON.unggah],
   ['#/kegiatan', 'Kegiatan', IKON.daftar],
+  ['#/dokumentasi', 'Dokumentasi', IKON.foto],
   ['#/riwayat', 'Riwayat', IKON.riwayat],
 ] as const;
 
@@ -36,7 +38,7 @@ function kerangka() {
   </aside>
   <header class="top"><div class="top-kiri"><img class="ojk kecil" src="/logo-ojk.png" alt="Otoritas Jasa Keuangan" width="325" height="128">${merek}</div><button class="ikon-btn" id="keluar2" aria-label="Keluar">${IKON.keluar}</button></header>
   <main id="hal" class="main" tabindex="-1"></main>
-  <nav class="bawah">${NAV.map(([h, t, ic]) => `<a href="${h}">${ic}<span>${t.replace(' laporan', '')}</span></a>`).join('')}</nav>`;
+  <nav class="bawah">${NAV.map(([h, t, ic]) => `<a href="${h}">${ic}<span>${t === 'Dokumentasi' ? 'Foto' : t}</span></a>`).join('')}</nav>`;
   const keluar = () => {
     kode.hapus();
     lupakanData();
@@ -59,6 +61,7 @@ function rute() {
   else if (h.startsWith('#/unggah')) viewUnggah(hal);
   else if (h.startsWith('#/sampah')) viewSampah(hal);
   else if (h.startsWith('#/riwayat')) viewRiwayat(hal);
+  else if (h.startsWith('#/dokumentasi')) viewDokumentasi(hal);
   else if (h.startsWith('#/impor')) viewImpor(hal);
   else if (h.startsWith('#/laporan')) viewLaporan(hal, new URLSearchParams(h.split('?')[1] || ''));
   else if (h.startsWith('#/kegiatan')) viewDaftar(hal);

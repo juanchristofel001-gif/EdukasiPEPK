@@ -631,3 +631,46 @@ input.ro { color: var(--mute); }
 .lw-foto-kartu .lwf-kepala span { font-size: 15px; }
 .lwf-status { margin: 0 0 10px; padding: 8px 12px; border-radius: 10px; background: var(--birut); font-size: 13px; }
 .lwf-status.galat { background: var(--merah-t); color: var(--merah); }
+
+/* ---------- Dokumentasi (galeri foto) ---------- */
+.dk-tambah { width: auto; max-width: 340px; background-color: var(--card); box-shadow: var(--sh); font-weight: 700; color: var(--biru); }
+.dk-grup + .dk-grup { margin-top: 16px; }
+.dk-kepala { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+.dk-kepala h2 { font-size: 17px; line-height: 1.35; }
+.dk-kepala h2 a { color: inherit; text-decoration: none; }
+.dk-kepala h2 a:hover { color: var(--biru); text-decoration: underline; }
+.dk-aksi { display: flex; gap: 8px; flex-wrap: wrap; }
+.dk-aksi .btn { padding: 9px 14px; font-size: 13px; }
+.dk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.dk-foto { margin: 0; }
+.dk-foto button { display: block; width: 100%; aspect-ratio: 4 / 3; padding: 0; border: 0; border-radius: 14px; overflow: hidden; background: var(--field); cursor: zoom-in; position: relative; }
+.dk-foto:not(.siap):not(.gagal) button::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.6), transparent); animation: dkKilau 1.2s infinite; }
+@keyframes dkKilau { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.dk-foto.gagal button::after { content: 'Foto gagal dimuat'; position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; color: var(--mute); }
+.dk-foto img { width: 100%; height: 100%; object-fit: cover; display: block; opacity: 0; transition: opacity .25s, transform .3s; }
+.dk-foto.siap img { opacity: 1; }
+.dk-foto button:hover img { transform: scale(1.03); }
+.dk-foto button:focus-visible { outline: 3px solid var(--biru); outline-offset: 2px; }
+.dk-foto figcaption { font-size: 13px; color: var(--mute); margin-top: 7px; line-height: 1.4; }
+.dk-foto figcaption b { color: var(--ink); }
+.dk-lihat { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: rgba(18, 16, 20, 0.94); color: #fff; }
+.dk-lihat[open] { display: flex; flex-direction: column; }
+.dk-lihat::backdrop { background: transparent; }
+.dkl-atas { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 16px 20px; }
+.dkl-atas small { display: block; color: rgba(255,255,255,.65); margin-top: 3px; font-size: 13px; }
+.dkl-ket { color: rgba(255,255,255,.9); }
+.dkl-aksi { display: flex; gap: 8px; }
+.dkl-tutup { font-size: 22px; padding: 6px 14px; }
+.dkl-bidang { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 12px 20px; }
+.dkl-bidang img { max-width: calc(100% - 120px); max-height: 100%; object-fit: contain; border-radius: 8px; }
+.dkl-panah { flex: none; width: 48px; height: 48px; border-radius: 50%; border: 0; background: rgba(255,255,255,.14); color: #fff; font-size: 28px; line-height: 1; cursor: pointer; }
+.dkl-panah:hover { background: rgba(255,255,255,.26); }
+.dkl-panah[hidden] { display: block; visibility: hidden; }
+@media (max-width: 720px) {
+  .dk-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .dk-tambah { max-width: 100%; width: 100%; }
+  .ph .kontrol:has(.dk-tambah) { width: 100%; }
+  .dkl-bidang img { max-width: calc(100% - 88px); }
+  .dkl-panah { width: 40px; height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) { .dk-foto:not(.siap) button::after { animation: none; } .dk-foto img { transition: none; } }

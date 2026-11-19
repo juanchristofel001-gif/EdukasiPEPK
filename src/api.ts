@@ -91,6 +91,7 @@ export const api = {
   insight: (dari: string, sampai: string, buat = false) =>
     req<{ insight: Insight | null }>(buat ? 'POST' : 'GET', `/api/insight?dari=${dari}&sampai=${sampai}`).then((r) => r.insight),
   fotoDaftar: (kegiatanId: string) => req<{ foto: FotoMeta[] }>('GET', '/api/foto?kegiatan=' + encodeURIComponent(kegiatanId)).then((r) => r.foto),
+  fotoSemua: () => req<{ foto: FotoMeta[] }>('GET', '/api/foto').then((r) => r.foto),
   fotoUnggah: (f: { kegiatanId: string; data: string; w: number; h: number; ket: string }) => req<{ foto: FotoMeta }>('POST', '/api/foto', f).then((r) => r.foto),
   fotoUbah: (id: string, ubah: { ket?: string; urutan?: number }) => req<{ diubah: string }>('PATCH', '/api/foto?id=' + encodeURIComponent(id), ubah),
   fotoHapus: (id: string) => req<{ dihapus: string }>('DELETE', '/api/foto?id=' + encodeURIComponent(id)),

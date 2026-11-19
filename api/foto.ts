@@ -1,5 +1,5 @@
 // /api/foto — foto dokumentasi kegiatan (dipakai di halaman kegiatan dan halaman 2 laporan Word).
-//   GET    ?kegiatan=<id>  → { foto: FotoMeta[] }   (tanpa isi gambar)
+//   GET    ?kegiatan=<id>  → { foto: FotoMeta[] }   (tanpa isi gambar; tanpa ?kegiatan = semua foto, untuk menu Dokumentasi)
 //   GET    ?id=<id>        → gambar JPEG
 //   POST   { kegiatanId, data (base64 JPEG), w, h, ket } → { foto: FotoMeta }
 //   PATCH  ?id=<id> { ket?, urutan? }
@@ -28,8 +28,7 @@ export default async function handler(req: Req, res: Res) {
           return res.status(200).send(Buffer.from(f.data, 'base64'));
         }
         const kid = String(req.query.kegiatan || '');
-        if (!kid) return fail(res, 400, 'Sebutkan kegiatan.');
-        return ok(res, { foto: await s.fotoDaftar(kid) });
+        return ok(res, { foto: await s.fotoDaftar(kid || undefined) });
       }
       case 'POST': {
         const b = (req.body || {}) as Record<string, unknown>;

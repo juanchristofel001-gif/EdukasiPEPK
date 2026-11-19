@@ -37,7 +37,7 @@ interface Store {
   hapusCadangan(tanggal: string): Promise<void>;
   catat(r: Riwayat): Promise<void>;
   riwayat(batas: number): Promise<Riwayat[]>; // terbaru dulu
-  fotoDaftar(kegiatanId: string): Promise<FotoMeta[]>; // tanpa isi gambar, urut
+  fotoDaftar(kegiatanId?: string): Promise<FotoMeta[]>; // tanpa isi gambar, urut; tanpa id = semua foto
   fotoAmbil(id: string): Promise<FotoDok | null>;
   fotoSimpan(f: FotoDok): Promise<void>;
   fotoUbah(id: string, ubah: Partial<Pick<FotoMeta, 'ket' | 'urutan'>>): Promise<boolean>;
@@ -108,7 +108,8 @@ async function firestore(): Promise<Store> {
       return s.docs.map((d) => d.data() as Riwayat);
     },
     async fotoDaftar(kegiatanId) {
-      const s = await db.collection('foto').where('kegiatanId', '==', kegiatanId).select('id', 'kegiatanId', 'urutan', 'ket', 'w', 'h', 'dibuat', 'oleh').get();
+      const kol = db.collection('foto');
+      const s = await (kegiatanId ? kol.where('kegiatanId', '==', kegiatanId) : kol).select('id', 'kegiatanId', 'urutan', 'ket', 'w', 'h', 'dibuat', 'oleh').get();
       return s.docs.map((d) => d.data() as FotoMeta).sort((a, b) => a.urutan - b.urutan || a.dibuat.localeCompare(b.dibuat));
     },
     async fotoAmbil(id) {
@@ -225,7 +226,7 @@ function lokal(): Store {
     },
     async fotoDaftar(kegiatanId) {
       return Object.values(await read<Record<string, FotoDok>>(ffile, {}))
-        .filter((f) => f.kegiatanId === kegiatanId)
+        .filter((f) => !kegiatanId || f.kegiatanId === kegiatanId)
         .map(({ data, ...m }) => m)
         .sort((a, b) => a.urutan - b.urutan || a.dibuat.localeCompare(b.dibuat));
     },
