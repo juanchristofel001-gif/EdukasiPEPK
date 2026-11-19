@@ -1,5 +1,6 @@
 // Panggilan ke Gemini API. Kunci disimpan di environment variable GEMINI_API_KEY (Vercel),
 // tidak pernah dikirim ke browser.
+import { samarkan } from './pii.js';
 
 const CHAIN = ['gemini-3.5-flash-lite', 'gemini-3.6-flash', 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-flash-lite-latest'];
 let good: string | null = null;
@@ -15,7 +16,8 @@ type Opt = { json?: boolean; temperature?: number; maxTokens?: number; timeout?:
 
 async function call(model: string, key: string, parts: Part[], opt: Opt) {
   const body = {
-    contents: [{ role: 'user', parts }],
+    // Teks disamarkan dulu: NIK, nomor HP, email, NPWP, dan rekening tidak pernah dikirim ke Gemini.
+    contents: [{ role: 'user', parts: parts.map((p) => ('text' in p ? { text: samarkan(p.text) } : p)) }],
     generationConfig: {
       temperature: opt.temperature ?? 0.2,
       maxOutputTokens: opt.maxTokens ?? 4096,
