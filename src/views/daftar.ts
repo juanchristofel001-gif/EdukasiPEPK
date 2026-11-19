@@ -123,10 +123,16 @@ export async function viewDetail(el: HTMLElement, id: string) {
     .catch((e) => ($('#rwKeg .isi', el).innerHTML = `<p class="galat">${esc(e.message)}</p>`));
   const form = $<HTMLFormElement>('form', el);
   pasangForm(form);
-  pasangLaporanWord($('.lw', el), form, () => k, async (isian) => {
-    await api.ubah(k.id, isian);
-    await segarkanData();
-  });
+  pasangLaporanWord(
+    $('.lw', el),
+    form,
+    () => k,
+    async (isian) => {
+      await api.ubah(k.id, isian);
+      await segarkanData();
+    },
+    { foto: [] },
+  );
   $('#simpan', el).onclick = async (e) => {
     const b = e.currentTarget as HTMLButtonElement;
     const isian = bacaForm(form, k);

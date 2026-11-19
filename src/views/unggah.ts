@@ -4,12 +4,12 @@ import { api, nama } from '../api.js';
 import { periksa, type KegiatanInput } from '../../shared/schema.js';
 import { esc, $, toast } from '../ui.js';
 import { formHtml, bacaForm, tampilGalat, pasangForm } from './form.js';
-import { kartuLaporanWord, pasangLaporanWord, naskahDiLayar } from './laporan-word.js';
+import { kartuLaporanWord, pasangLaporanWord, naskahDiLayar, type Foto } from './laporan-word.js';
 import { IKON } from '../ikon.js';
 import { segarkanData } from '../data.js';
 import { siapkan } from '../baca-file.js';
 
-type Item = { id: number; nama: string; status: 'baca' | 'cek' | 'gagal' | 'tersimpan'; isian?: KegiatanInput; galat?: string; buka?: boolean };
+type Item = { id: number; nama: string; status: 'baca' | 'cek' | 'gagal' | 'tersimpan'; isian?: KegiatanInput; galat?: string; buka?: boolean; foto?: Foto[] };
 let antrean: Item[] = [];
 let nomor = 0;
 
@@ -69,7 +69,7 @@ function gambar() {
       if (x.status === 'baca') return `<section class="kartu item" data-id="${x.id}">${head}<div class="memuat"><i></i><i></i><i></i></div></section>`;
       if (x.status === 'gagal')
         return `<section class="kartu item" data-id="${x.id}">${head}<p class="galat">${esc(x.galat)}</p><div class="aksi"><button class="btn" data-isi="${x.id}">Isi manual</button></div></section>`;
-      const lw = kartuLaporanWord(x.isian!.naskah, x.isian!.tanggal, { lipat: true });
+      const lw = kartuLaporanWord(x.isian!.naskah, x.isian!.tanggal, { lipat: true, foto: (x.foto ||= []) });
       return `<section class="kartu item" data-id="${x.id}">${head}${formHtml(x.isian!, { tandaiAi: !!x.nama })}${x.buka ? lw.replace('<details class="lw lw-lipat"', '<details class="lw lw-lipat" open') : lw}<div class="aksi"><button class="btn" data-simpan="${x.id}">Simpan kegiatan</button><button type="button" class="btn utama lw-unduh">${IKON.unduh}Simpan & unduh .docx</button></div></section>`;
     })
     .join('');
@@ -90,7 +90,7 @@ function gambar() {
         await segarkanData();
         setTimeout(gambar, 1500);
       },
-      { kecamatanWajib: true },
+      { kecamatanWajib: true, foto: (it.foto ||= []) },
     );
   });
   box.onclick = async (e) => {

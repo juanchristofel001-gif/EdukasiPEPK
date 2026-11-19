@@ -608,3 +608,20 @@ input.ro { color: var(--mute); }
 .peta-alat { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin: 12px 0 6px; }
 .pa-grup { display: flex; align-items: center; gap: 8px; }
 .pa-grup > span { font-size: 12px; font-weight: 600; color: var(--mute); }
+
+/* ---------- Laporan Word: foto dokumentasi ---------- */
+.lw-foto { border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.lwf-kepala { display: flex; flex-direction: column; gap: 2px; margin-bottom: 10px; }
+.lwf-kepala span { font-size: 12.5px; font-weight: 700; }
+.lwf-kepala small { font-size: 12px; color: var(--mute); }
+.lwf-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.lwf-grid.memproses { opacity: 0.6; pointer-events: none; }
+.lwf { position: relative; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.lwf img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; background: var(--field); display: block; }
+.lwf-hapus { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; border: 0; background: rgba(28, 26, 29, 0.7); color: #fff; font-size: 16px; line-height: 1; cursor: pointer; }
+.lwf-hapus:hover { background: var(--biru); }
+.lwf-ket { padding: 6px 8px; font-size: 12.5px; }
+.lwf-tambah { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; aspect-ratio: 4 / 3; border: 1.5px dashed var(--line); border-radius: 10px; color: var(--mute); font-size: 12.5px; font-weight: 600; cursor: pointer; text-align: center; }
+.lwf-tambah span { font-size: 22px; line-height: 1; color: var(--biru); }
+.lwf-tambah:hover, .lwf-tambah:focus-within { border-color: var(--biru); color: var(--biru); }
+.lwf-tambah input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
