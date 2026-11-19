@@ -595,3 +595,16 @@ input.ro { color: var(--mute); }
 .multi-op:hover { background: var(--field); }
 .multi-op input { width: 16px; height: 16px; flex: none; accent-color: var(--biru); }
 .multi-op[hidden] { display: none; }
+
+/* ---------- Tombol pilihan: latar aktif yang bergeser ---------- */
+.seg { position: relative; }
+.seg-thumb { position: absolute; left: 0; top: 0; background: #fff; border-radius: 10px; box-shadow: 0 1px 3px rgba(28, 26, 29, 0.12); pointer-events: none; opacity: 0; transition: transform 0.32s cubic-bezier(0.3, 0.8, 0.25, 1), width 0.32s cubic-bezier(0.3, 0.8, 0.25, 1), opacity 0.2s; }
+.seg.kecil .seg-thumb { border-radius: 9px; }
+.seg button { position: relative; z-index: 1; }
+.seg[data-halus] button.on { background: transparent; box-shadow: none; }
+@media (prefers-reduced-motion: reduce) { .seg-thumb { transition: none; } }
+
+/* ---------- Peta: satu baris pengaturan ---------- */
+.peta-alat { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px; margin: 12px 0 6px; }
+.pa-grup { display: flex; align-items: center; gap: 8px; }
+.pa-grup > span { font-size: 12px; font-weight: 600; color: var(--mute); }

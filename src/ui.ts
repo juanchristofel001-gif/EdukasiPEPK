@@ -52,3 +52,27 @@ export function unduh(nama: string, isi: string, tipe = 'text/csv;charset=utf-8'
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+// Tombol pilihan (.seg) dengan latar putih yang bergeser halus ke pilihan aktif.
+export function segHalus(root: ParentNode = document) {
+  root.querySelectorAll<HTMLElement>('.seg:not([data-halus])').forEach((seg) => {
+    seg.dataset.halus = '1';
+    const t = document.createElement('i');
+    t.className = 'seg-thumb';
+    t.setAttribute('aria-hidden', 'true');
+    seg.prepend(t);
+    const atur = (gerak = true) => {
+      const on = seg.querySelector<HTMLElement>('button.on');
+      if (!on || !on.offsetWidth) return void (t.style.opacity = '0');
+      if (!gerak) t.style.transition = 'none';
+      t.style.opacity = '1';
+      t.style.width = on.offsetWidth + 'px';
+      t.style.height = on.offsetHeight + 'px';
+      t.style.transform = `translate(${on.offsetLeft}px, ${on.offsetTop}px)`;
+      if (!gerak) requestAnimationFrame(() => (t.style.transition = ''));
+    };
+    atur(false);
+    new MutationObserver(() => atur()).observe(seg, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    if ('ResizeObserver' in window) new ResizeObserver(() => atur(false)).observe(seg);
+  });
+}

@@ -4,7 +4,7 @@ import './style.css';
 import { LOGO, NAMA } from './merek.js';
 import { api, kode, nama, saatKodeDitolak } from './api.js';
 import { lupakanData } from './data.js';
-import { esc, $ } from './ui.js';
+import { esc, $, segHalus } from './ui.js';
 import { viewDasbor } from './views/dasbor.js';
 import { IKON } from './ikon.js';
 import { viewUnggah } from './views/unggah.js';
@@ -145,3 +145,6 @@ saatKodeDitolak(() => {
 });
 window.addEventListener('hashchange', rute);
 rute();
+
+// Pasang efek geser pada setiap kelompok tombol pilihan yang muncul di halaman.
+new MutationObserver(() => segHalus()).observe(document.body, { childList: true, subtree: true });

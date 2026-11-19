@@ -148,11 +148,11 @@ ${
   </section>
   <div class="dash">
     <section class="kartu sp8 peta-kartu">
-      <div class="ch"><div><h2>Peta sebaran</h2><p class="sub"></p></div>
-        <div class="peta-kontrol">
-          <div class="seg kecil" role="group" aria-label="Tingkat wilayah"><button data-t="kecamatan" class="${tingkat === 'kecamatan' ? 'on' : ''}">Kecamatan</button><button data-t="kabkota" class="${tingkat === 'kabkota' ? 'on' : ''}">Kab/kota</button></div>
-          <div class="seg kecil" role="group" aria-label="Ukuran peta"><button data-u="kegiatan" class="${ukuran === 'kegiatan' ? 'on' : ''}">Kegiatan</button><button data-u="peserta" class="${ukuran === 'peserta' ? 'on' : ''}">Peserta</button><button data-u="penduduk" class="${ukuran === 'penduduk' ? 'on' : ''}" title="Kegiatan per 100 ribu penduduk">Per penduduk</button></div>
-        </div></div>
+      <div class="ch"><div><h2>Peta sebaran</h2><p class="sub"></p></div></div>
+      <div class="peta-alat">
+        <div class="pa-grup"><span>Tampilkan</span><div class="seg kecil" role="group" aria-label="Ukuran peta"><button data-u="kegiatan" class="${ukuran === 'kegiatan' ? 'on' : ''}">Kegiatan</button><button data-u="peserta" class="${ukuran === 'peserta' ? 'on' : ''}">Peserta</button><button data-u="penduduk" class="${ukuran === 'penduduk' ? 'on' : ''}" title="Kegiatan per 100 ribu penduduk">Per penduduk</button></div></div>
+        <div class="pa-grup"><span>Wilayah</span><div class="seg kecil" role="group" aria-label="Tingkat wilayah"><button data-t="kecamatan" class="${tingkat === 'kecamatan' ? 'on' : ''}">Kecamatan</button><button data-t="kabkota" class="${tingkat === 'kabkota' ? 'on' : ''}">Kab/kota</button></div></div>
+      </div>
       <div class="peta" id="peta"><div class="memuat besar"><i></i><i></i><i></i></div></div>
       <div class="legenda" id="legenda"></div>
       <div class="tip" id="tip" hidden></div>
