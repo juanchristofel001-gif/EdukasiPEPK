@@ -109,5 +109,5 @@ Kartu di Dasbor yang membandingkan porsi topik masalah konsumen di front desk (d
 
 - Trapesium mengklasifikasikan catatan petugas ke daftar `TOPIK` yang sama (`shared/schema.ts` di sini, `api/_kategori.js` di Trapesium). **Kalau daftar topik diubah, ubah di kedua repo.**
 - Trapesium mengirim hanya angka (jumlah per bulan × jenis layanan × kategori), lewat server Trapesium ke `POST /api/pelayanan` dengan header `x-kunci-agregat`. Disimpan di Firestore `meta/pelayanan`, dibaca dasbor lewat `GET /api/pelayanan` dengan kode akses.
-- Kolom `wilayah` sudah ada tapi masih kosong, disiapkan untuk domisili konsumen (kab/kota/kecamatan) kalau nanti dicatat.
+- Setiap baris membawa `kab` dan `kec` domisili konsumen (kosong kalau tidak diketahui), jadi kartu ikut filter kab/kota di dasbor. Layanan tanpa data wilayah hanya dihitung di tampilan seluruh Banten.
 - Folder `api/` sekarang berisi 12 fungsi, batas paket Hobby Vercel. Fungsi baru harus digabung ke yang sudah ada.

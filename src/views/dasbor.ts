@@ -109,7 +109,7 @@ export async function viewDasbor(el: HTMLElement) {
   };
   pasangPeta(el, sAll, s);
   pasangInsight(el, p);
-  pasangGap(el, sAll.topik, p, !!pilihKab);
+  pasangGap(el, s.topik, p, pilihKab);
 }
 
 function kosongHtml() {
@@ -175,7 +175,7 @@ ${
     )}</section>
     <section class="kartu sp4"><div class="ch"><div><h2>Sasaran peserta</h2><p class="sub">Jumlah kegiatan per sasaran</p></div></div>${batang(s.sasaran, 13, { ikon: ikonPilihan })}</section>
     <section class="kartu sp4"><div class="ch"><div><h2>Topik materi</h2><p class="sub">Jumlah kegiatan yang membawakan topik ini</p></div></div>${batang(s.topik, 8, { ikon: ikonPilihan })}</section>
-    <section class="kartu sp12" id="gap"><div class="ch"><div><h2>Pelayanan vs edukasi</h2><p class="sub">Porsi topik masalah konsumen di front desk (Trapesium) dibanding porsi topik edukasi, seluruh Banten</p></div></div><div class="gap-isi"><div class="memuat"><i></i><i></i><i></i></div></div></section>
+    <section class="kartu sp12" id="gap"><div class="ch"><div><h2>Pelayanan vs edukasi</h2><p class="sub">Porsi topik masalah konsumen di front desk (Trapesium) dibanding porsi topik edukasi${wk ? ' di ' + esc(wk.nama.replace('Kabupaten ', 'Kab. ')) : ', seluruh Banten'}</p></div></div><div class="gap-isi"><div class="memuat"><i></i><i></i><i></i></div></div></section>
     <section class="kartu sp12"><div class="ch"><div><h2>Kegiatan terbaru</h2><p class="sub">Lima kegiatan terakhir di periode ini</p></div><a class="lnk" href="#/kegiatan">Lihat semua</a></div>${terbaru(semua, p)}</section>
   </div>`;
 }

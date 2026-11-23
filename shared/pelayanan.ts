@@ -1,6 +1,6 @@
 // Angka agregat pelayanan konsumen yang dikirim Trapesium (aplikasi pelayanan) ke sini,
 // untuk membandingkan topik masalah konsumen dengan topik edukasi. Hanya jumlah, tanpa data pribadi.
-import { TOPIK } from './schema.js';
+import { TOPIK, SEMUA_WILAYAH, cocokKecamatan } from './schema.js';
 
 export const JENIS_LAYANAN = ['SLIK', 'Pengaduan', 'Lainnya'] as const;
 
@@ -8,11 +8,12 @@ export type BarisPelayanan = {
   bulan: string; // YYYY-MM
   jenis: (typeof JENIS_LAYANAN)[number];
   kategori: (typeof TOPIK)[number];
-  wilayah: string; // kosong dulu; nanti kab/kota atau kecamatan domisili konsumen
+  kab: string; // kab/kota domisili konsumen, '' kalau tidak diketahui
+  kec: string; // kecamatan, '' kalau tidak diketahui
   jumlah: number;
 };
 export type AgregatPelayanan = {
-  versi: 1;
+  versi: 2;
   diterima: string; // ISO, diisi server SiPEDULIKU
   perBulan: Record<string, { total: number; dianalisis: number; berkategori: number }>;
   baris: BarisPelayanan[];
@@ -38,7 +39,8 @@ export function bacaAgregat(v: unknown): Omit<AgregatPelayanan, 'diterima'> | nu
     if (!r || !bulanOk(r.bulan) || !JENIS_LAYANAN.includes(r.jenis) || !(TOPIK as readonly string[]).includes(r.kategori)) continue;
     const n = angka(r.jumlah);
     if (!n) continue;
-    baris.push({ bulan: r.bulan, jenis: r.jenis, kategori: r.kategori, wilayah: typeof r.wilayah === 'string' ? r.wilayah.slice(0, 80) : '', jumlah: n });
+    const kab = (SEMUA_WILAYAH as readonly string[]).includes(r.kab) ? r.kab : '';
+    baris.push({ bulan: r.bulan, jenis: r.jenis, kategori: r.kategori, kab, kec: kab ? cocokKecamatan(kab, r.kec) : '', jumlah: n });
   }
-  return { versi: 1, perBulan, baris };
+  return { versi: 2, perBulan, baris };
 }

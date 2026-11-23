@@ -1,5 +1,5 @@
 // Kartu "Pelayanan vs edukasi": membandingkan porsi topik masalah konsumen (dari Trapesium)
-// dengan porsi topik edukasi di periode yang sama. Hanya angka agregat, seluruh Banten.
+// dengan porsi topik edukasi di periode yang sama. Hanya angka agregat; ikut filter kab/kota di dasbor.
 import type { Periode } from '../../shared/statistik.js';
 import { angka, namaBulan } from '../../shared/statistik.js';
 import type { AgregatPelayanan } from '../../shared/pelayanan.js';
@@ -16,11 +16,11 @@ const MIN_SELISIH = 5;
 
 export type BarisGap = { topik: string; pel: number; edu: number; pPel: number; pEdu: number; selisih: number; perhatian: boolean };
 
-export function hitungGap(a: AgregatPelayanan, eduTopik: [string, number][], p: Periode, j: 'semua' | 'Pengaduan') {
+export function hitungGap(a: AgregatPelayanan, eduTopik: [string, number][], p: Periode, j: 'semua' | 'Pengaduan', kab: string | null = null) {
   const bDari = p.dari.slice(0, 7), bSampai = p.sampai.slice(0, 7);
   const masuk = (m: string) => m >= bDari && m <= bSampai;
   const pel: Record<string, number> = {};
-  for (const r of a.baris) if (masuk(r.bulan) && (j === 'semua' || r.jenis === j) && r.kategori !== 'Lainnya') pel[r.kategori] = (pel[r.kategori] || 0) + r.jumlah;
+  for (const r of a.baris) if (masuk(r.bulan) && (j === 'semua' || r.jenis === j) && r.kategori !== 'Lainnya' && (!kab || r.kab === kab)) pel[r.kategori] = (pel[r.kategori] || 0) + r.jumlah;
   const edu: Record<string, number> = {};
   for (const [k, v] of eduTopik) if (k !== 'Lainnya') edu[k] = v;
   const tPel = Object.values(pel).reduce((x, y) => x + y, 0);
@@ -37,18 +37,22 @@ export function hitungGap(a: AgregatPelayanan, eduTopik: [string, number][], p: 
 
 const pct = (v: number) => (v < 1 && v > 0 ? '<1' : Math.round(v)) + '%';
 
-function html(a: AgregatPelayanan | null, eduTopik: [string, number][], p: Periode, terfilter: boolean) {
+function html(a: AgregatPelayanan | null, eduTopik: [string, number][], p: Periode, kab: string | null) {
   if (!a) return '<p class="kosong-kecil kiri">Belum ada data pelayanan dari Trapesium. Data terkirim otomatis saat pemilik membuka Trapesium.</p>';
-  const g = hitungGap(a, eduTopik, p, jenis);
+  const g = hitungGap(a, eduTopik, p, jenis, kab);
+  const kabPendek = kab ? kab.replace('Kabupaten ', 'Kab. ') : '';
   const seg = `<div class="seg kecil" role="group" aria-label="Jenis layanan">${(['Pengaduan', 'semua'] as const)
     .map((v) => `<button data-gj="${v}" class="${v === jenis ? 'on' : ''}">${v === 'semua' ? 'Semua layanan' : 'Pengaduan saja'}</button>`)
     .join('')}</div>`;
   const catatan = `<p class="gap-cat">${
-    g.cakupan.total ? `${angka(g.cakupan.berkategori)} dari ${angka(g.cakupan.total)} layanan di periode ini sudah punya kategori dari catatan petugas. ` : ''
-  }Porsi dihitung dari jumlah penyebutan topik (satu layanan bisa punya 2 kategori, satu kegiatan bisa membawakan beberapa topik). Data pelayanan diterima ${esc(new Date(a.diterima).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }))}.${
-    terfilter ? ' Kartu ini selalu seluruh Banten: data pelayanan belum mencatat wilayah konsumen.' : ''
-  }</p>`;
-  if (!g.tPel) return seg + `<p class="kosong-kecil kiri">Belum ada layanan berkategori di periode ini (data pelayanan tersedia ${esc(rentang(a))}).</p>` + catatan;
+    kab
+      ? `Hanya ${esc(kabPendek)}: pelayanan dari konsumen yang domisilinya tercatat di sini, edukasi yang berlangsung di sini. Layanan tanpa data wilayah tidak ikut dihitung. `
+      : g.cakupan.total
+        ? `${angka(g.cakupan.berkategori)} dari ${angka(g.cakupan.total)} layanan di periode ini sudah punya kategori dari catatan petugas. `
+        : ''
+  }Porsi dihitung dari jumlah penyebutan topik (satu layanan bisa punya 2 kategori, satu kegiatan bisa membawakan beberapa topik). Data pelayanan diterima ${esc(new Date(a.diterima).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }))}.</p>`;
+  if (!g.tPel)
+    return seg + `<p class="kosong-kecil kiri">Belum ada layanan berkategori${kab ? ` dari konsumen ${esc(kabPendek)}` : ''} di periode ini (data pelayanan tersedia ${esc(rentang(a))}).</p>` + catatan;
   const rows = g.baris
     .filter((b) => b.pel || b.edu)
     .slice(0, 12)
@@ -69,7 +73,7 @@ function rentang(a: AgregatPelayanan) {
   return b.length ? `${namaBulan(b[0])} – ${namaBulan(b[b.length - 1])}` : 'belum ada';
 }
 
-export async function pasangGap(el: HTMLElement, eduTopik: [string, number][], p: Periode, terfilter: boolean) {
+export async function pasangGap(el: HTMLElement, eduTopik: [string, number][], p: Periode, kab: string | null) {
   const box = $('#gap .gap-isi', el);
   if (!box) return;
   let a: AgregatPelayanan | null;
@@ -81,7 +85,7 @@ export async function pasangGap(el: HTMLElement, eduTopik: [string, number][], p
     return;
   }
   const gambar = () => {
-    box.innerHTML = html(a, eduTopik, p, terfilter);
+    box.innerHTML = html(a, eduTopik, p, kab);
     $$<HTMLButtonElement>('[data-gj]', box).forEach(
       (b) =>
         (b.onclick = () => {
