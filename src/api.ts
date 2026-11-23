@@ -3,6 +3,7 @@ import type { Kegiatan, KegiatanInput, Naskah, Riwayat } from '../shared/schema.
 import type { Insight } from '../api/insight.js';
 import type { TafsirLaporan } from '../api/laporan.js';
 import type { FotoMeta } from '../api/_lib/db.js';
+import type { AgregatPelayanan } from '../shared/pelayanan.js';
 
 const KUNCI = 'edukasi-pepk:kode';
 
@@ -72,6 +73,7 @@ async function req<T>(method: string, url: string, body?: unknown, kodeKhusus?: 
 }
 
 export const api = {
+  pelayanan: () => req<{ pelayanan: AgregatPelayanan | null }>('GET', '/api/pelayanan').then((r) => r.pelayanan),
   cekKode: (k: string) => req<{ ok: true }>('POST', '/api/akses', undefined, k),
   daftar: () => req<{ kegiatan: Kegiatan[] }>('GET', '/api/kegiatan').then((r) => r.kegiatan),
   simpan: (k: KegiatanInput) => req<{ kegiatan: Kegiatan }>('POST', '/api/kegiatan', k).then((r) => r.kegiatan),

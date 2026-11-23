@@ -81,6 +81,7 @@ Koleksi Firestore: `kegiatan` (data, termasuk yang di sampah dengan kolom `dihap
 |---|---|
 | `KODE_AKSES` | Kode akses tim. Ganti kapan saja; semua perangkat akan diminta kode baru. |
 | `GEMINI_API_KEY` | API key dari Google AI Studio |
+| `KUNCI_AGREGAT` | Kunci rahasia untuk menerima angka agregat pelayanan dari Trapesium (`/api/pelayanan`). Harus sama persis dengan `KUNCI_AGREGAT` di Vercel Trapesium. |
 | `FIREBASE_SERVICE_ACCOUNT` | Seluruh isi file JSON kunci akun layanan Firebase |
 | `GEMINI_MODEL` | (opsional) memaksa model tertentu |
 | `CRON_SECRET` | (opsional) kalau diisi, jadwal cadangan harus membawa rahasia ini |
@@ -101,3 +102,12 @@ Sebelum push, jalankan `npm run cek` untuk memeriksa tipe data.
 
 - Ikon jabat tangan pada logo: [Lucide](https://lucide.dev) (lisensi ISC).
 - Font: Plus Jakarta Sans (SIL Open Font License), disajikan lewat paket @fontsource.
+
+## Pelayanan vs edukasi
+
+Kartu di Dasbor yang membandingkan porsi topik masalah konsumen di front desk (dari Trapesium) dengan porsi topik edukasi di periode yang sama.
+
+- Trapesium mengklasifikasikan catatan petugas ke daftar `TOPIK` yang sama (`shared/schema.ts` di sini, `api/_kategori.js` di Trapesium). **Kalau daftar topik diubah, ubah di kedua repo.**
+- Trapesium mengirim hanya angka (jumlah per bulan × jenis layanan × kategori), lewat server Trapesium ke `POST /api/pelayanan` dengan header `x-kunci-agregat`. Disimpan di Firestore `meta/pelayanan`, dibaca dasbor lewat `GET /api/pelayanan` dengan kode akses.
+- Kolom `wilayah` sudah ada tapi masih kosong, disiapkan untuk domisili konsumen (kab/kota/kecamatan) kalau nanti dicatat.
+- Folder `api/` sekarang berisi 12 fungsi, batas paket Hobby Vercel. Fungsi baru harus digabung ke yang sudah ada.

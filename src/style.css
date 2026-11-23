@@ -674,3 +674,25 @@ input.ro { color: var(--mute); }
   .dkl-panah { width: 40px; height: 40px; }
 }
 @media (prefers-reduced-motion: reduce) { .dk-foto:not(.siap) button::after { animation: none; } .dk-foto img { transition: none; } }
+
+/* ---------- pelayanan vs edukasi ---------- */
+#gap .seg { margin-bottom: 14px; }
+.gap-kepala, .gap li { display: grid; grid-template-columns: minmax(150px, 1.3fr) 1fr 1fr; gap: 14px; align-items: center; }
+.gap-kepala { font-size: 12px; font-weight: 700; color: var(--mute); text-transform: uppercase; letter-spacing: 0.04em; padding: 0 0 6px; border-bottom: 1px solid var(--line); }
+.gap { list-style: none; margin: 0; padding: 0; }
+.gap li { padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.gap li:last-child { border-bottom: 0; }
+.gap .gn { display: flex; flex-direction: column; gap: 3px; }
+.gap .gn em { font-style: normal; font-size: 11px; font-weight: 700; color: var(--merah); background: var(--merah-t); border-radius: 6px; padding: 2px 7px; width: fit-content; }
+.gap .gb { display: flex; align-items: center; gap: 8px; }
+.gap .gb i { display: block; height: 10px; border-radius: 5px; min-width: 2px; transition: width 0.6s var(--ease); }
+.gap .gb.kiri i { background: var(--merah); }
+.gap .gb.kanan i { background: #8f8a95; }
+.gap .gb b { font-size: 13px; font-variant-numeric: tabular-nums; }
+.gap li.perhatian .gn { font-weight: 700; }
+.gap-cat { font-size: 12px; color: var(--mute); margin: 10px 0 0; line-height: 1.5; }
+@media (max-width: 640px) {
+  .gap-kepala, .gap li { grid-template-columns: 1fr 1fr; }
+  .gap-kepala span:first-child { display: none; }
+  .gap .gn { grid-column: 1 / -1; }
+}
