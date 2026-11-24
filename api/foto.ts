@@ -9,7 +9,7 @@ import { randomUUID } from 'node:crypto';
 import { izinkan, fail, ok, namaPengguna, type Req, type Res } from './_lib/http.js';
 import { db, catat, DbError, type FotoDok } from './_lib/db.js';
 
-export const MAKS_FOTO = 8;
+export const MAKS_FOTO = 16;
 const MAKS_DATA = 1_000_000; // karakter base64 (~730 KB); batas dokumen Firestore 1 MiB
 
 export default async function handler(req: Req, res: Res) {

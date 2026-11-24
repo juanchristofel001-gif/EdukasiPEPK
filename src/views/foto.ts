@@ -5,7 +5,7 @@ import { esc, $ } from '../ui.js';
 import { IKON } from '../ikon.js';
 
 export type Foto = { id: number; serverId?: string; blob: Blob; url: string; w: number; h: number; ket: string };
-export const MAKS_FOTO = 8;
+export const MAKS_FOTO = 16;
 let nomor = 0;
 
 // Perkecil foto (sisi terpanjang 1600 px, JPEG) supaya ringan; orientasi kamera diikuti.
