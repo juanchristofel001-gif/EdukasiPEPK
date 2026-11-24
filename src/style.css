@@ -696,3 +696,8 @@ input.ro { color: var(--mute); }
   .gap-kepala span:first-child { display: none; }
   .gap .gn { grid-column: 1 / -1; }
 }
+.gap .gt { display: flex; gap: 6px; flex-wrap: wrap; }
+.gap .gn em.abu { color: var(--ink, #333); background: var(--line); }
+.gap-n { font-size: 13px; color: var(--mute); margin: 0 0 10px; }
+.gap-n b { color: var(--ink, inherit); }
+.gap-kurang { color: var(--merah); }
