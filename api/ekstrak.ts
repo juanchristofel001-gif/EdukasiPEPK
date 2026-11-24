@@ -39,6 +39,7 @@ Ambil data kegiatan dari laporan dan jawab HANYA dengan satu objek JSON berikut:
  "topikUtama": SATU topik dari daftar topik di atas yang menjadi materi pokok/tema utama kegiatan (lihat judul dan tema). Materi pengantar atau template yang selalu dibawakan (misalnya pengenalan OJK) BUKAN topik utama, kecuali memang itu inti acaranya. "" jika tidak bisa ditentukan,
  "kanal": array kanal pengaduan/pengecekan yang dikenalkan, dari [${daftar(KANAL)}],
  "metode": array dari [${daftar(METODE)}],
+ "lainnya": {"bentuk":"","sasaran":"","topik":"","kanal":""} — kalau memilih "Lainnya" di salah satu kolom itu, tulis singkat apa isinya sesuai laporan (maks. 8 kata); selain itu "",
  "ringkasan": "maksimal 2 kalimat: apa kegiatannya dan untuk siapa",
  "catatan": "maksimal 2 kalimat: respons peserta, kendala, atau pertanyaan yang menonjol; kosong jika tidak ada"
 }

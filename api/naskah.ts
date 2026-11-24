@@ -4,7 +4,7 @@
 // dengan nama dari data. Naskah tidak disimpan di sini; tim menyunting dulu lalu menyimpannya lewat /api/kegiatan.
 import { izinkan, fail, ok, type Req, type Res } from './_lib/http.js';
 import { generateJson, GeminiError } from './_lib/gemini.js';
-import { rapikan, BAGIAN_NASKAH, type Naskah } from '../shared/schema.js';
+import { rapikan, tampilPilihan, BAGIAN_NASKAH, type Naskah } from '../shared/schema.js';
 import { tanggalPanjang } from '../shared/statistik.js';
 
 // Contoh gaya dari laporan tim (PKU Akbar PNM Cabang Serang), dipakai sebagai acuan nada dan panjang.
@@ -35,13 +35,13 @@ export default async function handler(req: Req, res: Res) {
     jamSelesaiEdukasi: k.jamSelesai,
     tempat: k.tempat,
     kabkota: k.kabkota,
-    bentuk: k.bentuk,
+    bentuk: tampilPilihan(k, 'bentuk').join(''),
     mode: k.mode,
-    sasaran: k.sasaran,
+    sasaran: tampilPilihan(k, 'sasaran'),
     sasaranDetail: k.sasaranDetail,
     peserta: k.peserta,
     pesertaPerkiraan: k.pesertaPerkiraan,
-    topik: k.topik,
+    topik: tampilPilihan(k, 'topik'),
     jumlahNarasumber: k.narasumber.length,
     ringkasanMateri: k.ringkasan,
     catatanLapangan: k.catatan,

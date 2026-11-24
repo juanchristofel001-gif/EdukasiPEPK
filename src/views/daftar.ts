@@ -1,5 +1,5 @@
 // Halaman "Kegiatan": daftar semua kegiatan + halaman ubah per kegiatan.
-import { SEMUA_WILAYAH, periksa, type Kegiatan } from '../../shared/schema.js';
+import { SEMUA_WILAYAH, periksa, tampilPilihan, type Kegiatan } from '../../shared/schema.js';
 import { tanggalPanjang, angka } from '../../shared/statistik.js';
 import { api } from '../api.js';
 import { dataKegiatan, segarkanData } from '../data.js';
@@ -43,7 +43,7 @@ export async function viewDaftar(el: HTMLElement) {
           .map(
             (k) => `<tr data-id="${k.id}" tabindex="0"><td class="nw">${tanggalPanjang(k.tanggal)}</td><td><a href="#/kegiatan/${k.id}">${esc(k.judul)}</a><span class="sub">${esc(
               k.tempat,
-            )}</span></td><td>${esc(k.kabkota)}${k.kecamatan ? `<span class="sub">Kec. ${esc(k.kecamatan)}</span>` : ''}</td><td>${esc(k.sasaran.join(', '))}</td><td class="r">${k.pesertaPerkiraan ? '±' : ''}${angka(k.peserta || 0)}</td></tr>`,
+            )}</span></td><td>${esc(k.kabkota)}${k.kecamatan ? `<span class="sub">Kec. ${esc(k.kecamatan)}</span>` : ''}</td><td>${esc(tampilPilihan(k, 'sasaran').join(', '))}</td><td class="r">${k.pesertaPerkiraan ? '±' : ''}${angka(k.peserta || 0)}</td></tr>`,
           )
           .join('')}</tbody></table>`
       : `<p class="sub kosong-kecil">${semua.length ? 'Tidak ada kegiatan yang cocok dengan pencarian.' : 'Belum ada kegiatan. Tambahkan lewat Input data.'}</p>`;
@@ -71,7 +71,7 @@ export async function viewDaftar(el: HTMLElement) {
 const KOLOM: [string, (k: Kegiatan) => unknown][] = [
   ['Tanggal', (k) => k.tanggal],
   ['Tanggal selesai', (k) => k.tanggalSelesai],
-  ['Bentuk', (k) => k.bentuk],
+  ['Bentuk', (k) => tampilPilihan(k, 'bentuk').join('')],
   ['Jenis', (k) => k.jenis],
   ['Judul', (k) => k.judul],
   ['Tema', (k) => k.tema],
@@ -82,12 +82,12 @@ const KOLOM: [string, (k: Kegiatan) => unknown][] = [
   ['Kecamatan', (k) => k.kecamatan],
   ['Mode', (k) => k.mode],
   ['Narasumber', (k) => k.narasumber.join('; ')],
-  ['Sasaran', (k) => k.sasaran.join('; ')],
+  ['Sasaran', (k) => tampilPilihan(k, 'sasaran').join('; ')],
   ['Keterangan peserta', (k) => k.sasaranDetail],
   ['Peserta', (k) => k.peserta ?? ''],
   ['Peserta perkiraan', (k) => (k.pesertaPerkiraan ? 'ya' : '')],
-  ['Topik', (k) => k.topik.join('; ')],
-  ['Kanal', (k) => k.kanal.join('; ')],
+  ['Topik', (k) => tampilPilihan(k, 'topik').join('; ')],
+  ['Kanal', (k) => tampilPilihan(k, 'kanal').join('; ')],
   ['Metode', (k) => k.metode.join('; ')],
   ['Ringkasan', (k) => k.ringkasan],
   ['Catatan', (k) => k.catatan],

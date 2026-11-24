@@ -118,7 +118,7 @@ function gambar() {
 function kosong(namaFile: string): KegiatanInput {
   return {
     judul: '', tema: '', pengundang: '', peranOjk: '', tanggal: '', tanggalSelesai: '', bentuk: '', jenis: '', tempat: '', kabkota: '', kabkotaDitebak: false, kecamatan: '', kecamatanDitebak: false, mode: '', narasumber: [],
-    sasaran: [], sasaranDetail: '', peserta: null, pesertaPerkiraan: false, topik: [], topikUtama: '', kanal: [], metode: [], ringkasan: '', catatan: '', jamMulai: '', jamSelesai: '', naskah: null, sumberFile: namaFile, dicatatOleh: nama.get(),
+    sasaran: [], sasaranDetail: '', peserta: null, pesertaPerkiraan: false, topik: [], topikUtama: '', lainnya: { bentuk: '', sasaran: '', topik: '', kanal: '' }, kanal: [], metode: [], ringkasan: '', catatan: '', jamMulai: '', jamSelesai: '', naskah: null, sumberFile: namaFile, dicatatOleh: nama.get(),
   };
 }
 

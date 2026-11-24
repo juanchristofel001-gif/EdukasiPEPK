@@ -707,3 +707,4 @@ input.ro { color: var(--mute); }
 .gap .gtr.naik { color: var(--merah); font-weight: 700; }
 .gap .gu { font-size: 13px; }
 .gap-utama { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--merah-t); font-size: 13px; }
+.isi-lain { margin-top: 8px; }

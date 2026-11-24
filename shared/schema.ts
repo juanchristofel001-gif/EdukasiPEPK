@@ -87,6 +87,8 @@ export type Kegiatan = {
   peserta: number | null;
   pesertaPerkiraan: boolean; // true kalau laporan menulis "kurang lebih", "sekitar", dll.
   topik: (typeof TOPIK)[number][];
+  // Isian manual saat memilih "Lainnya" pada bentuk, sasaran, topik, atau kanal.
+  lainnya: Lainnya;
   // Materi pokok kegiatan (satu topik). Topik lain di `topik` dianggap materi pendukung/template.
   topikUtama: (typeof TOPIK)[number] | '';
   kanal: (typeof KANAL)[number][];
@@ -103,6 +105,17 @@ export type Kegiatan = {
 };
 
 export type KegiatanInput = Omit<Kegiatan, 'id' | 'dibuat' | 'diubah'>;
+
+export const KOLOM_LAINNYA = ['bentuk', 'sasaran', 'topik', 'kanal'] as const;
+export type Lainnya = Record<(typeof KOLOM_LAINNYA)[number], string>;
+
+// Nilai untuk ditampilkan: "Lainnya" diganti dengan isian manualnya kalau ada.
+export function tampilPilihan(k: Pick<Kegiatan, 'bentuk' | 'sasaran' | 'topik' | 'kanal'> & { lainnya?: Partial<Lainnya> }, kolom: (typeof KOLOM_LAINNYA)[number]): string[] {
+  const v = k[kolom];
+  const daftar: string[] = Array.isArray(v) ? v : v ? [v] : [];
+  const isi = k.lainnya?.[kolom]?.trim();
+  return daftar.map((x) => (x === 'Lainnya' && isi ? isi : x));
+}
 
 // Naskah laporan Word (bagian A–E). Disimpan supaya laporan bisa diunduh ulang dengan isi yang sama.
 export const BAGIAN_NASKAH = [
@@ -155,6 +168,18 @@ export const perluKecamatan = (kab: string) => !!KECAMATAN[kab];
 
 // Merapikan data dari mana pun (form, AI, impor): buang nilai di luar daftar pilihan,
 // potong teks terlalu panjang, pastikan tipe benar.
+// Isian "Lainnya" hanya disimpan kalau "Lainnya" memang dipilih di kolom itu.
+function lainnyaDari(raw: Record<string, unknown>): Lainnya {
+  const l = (raw.lainnya && typeof raw.lainnya === 'object' ? raw.lainnya : {}) as Record<string, unknown>;
+  const dipilih = (kolom: string) => {
+    const v = raw[kolom];
+    return Array.isArray(v) ? v.includes('Lainnya') : v === 'Lainnya';
+  };
+  const out = {} as Lainnya;
+  for (const kolom of KOLOM_LAINNYA) out[kolom] = dipilih(kolom) ? str(l[kolom], 120) : '';
+  return out;
+}
+
 // Topik utama selalu ikut tercantum di daftar topik.
 function topikDanUtama(topik: (typeof TOPIK)[number][], utama: (typeof TOPIK)[number] | '') {
   return { topik: utama && !topik.includes(utama) ? [utama, ...topik] : topik, topikUtama: utama };
@@ -184,6 +209,7 @@ export function rapikan(raw: Record<string, unknown>): KegiatanInput {
     peserta: Number.isFinite(p) && p >= 0 && raw.peserta !== '' && raw.peserta !== null ? Math.round(p) : null,
     pesertaPerkiraan: raw.pesertaPerkiraan === true,
     ...topikDanUtama(picks(TOPIK, raw.topik), pick(TOPIK, raw.topikUtama)),
+    lainnya: lainnyaDari(raw),
     kanal: picks(KANAL, raw.kanal),
     metode: picks(METODE, raw.metode),
     ringkasan: str(raw.ringkasan, 1200),

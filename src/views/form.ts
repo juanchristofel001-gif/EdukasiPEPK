@@ -26,6 +26,10 @@ const field = (label: string, isi: string, opt: { lebar?: boolean; catatan?: str
     opt.catatan ? `<span class="hint">${opt.catatan}</span>` : ''
   }</div>`;
 
+// Kotak isian yang muncul saat "Lainnya" dipilih.
+const lain = (kolom: string, nilai: string, tampil: boolean, ph: string) =>
+  `<input class="isi-lain" name="lain_${kolom}" value="${esc(nilai)}" placeholder="${esc(ph)}" maxlength="120"${tampil ? '' : ' hidden'}>`;
+
 function opsiKec(kab: string, nilai: string) {
   const l = KECAMATAN[kab];
   if (!kab) return '<option value="">Pilih kabupaten/kota dulu</option>';
@@ -43,6 +47,21 @@ export function pasangForm(form: HTMLFormElement) {
     kec.closest('.field')?.querySelector('.warn')?.remove();
   });
   kec.disabled = !KECAMATAN[kab.value];
+
+  // Tampilkan kotak isian manual saat "Lainnya" dipilih.
+  for (const kolom of ['bentuk', 'sasaran', 'topik', 'kanal']) {
+    const isi = $<HTMLInputElement>(`[name="lain_${kolom}"]`, form);
+    if (!isi) continue;
+    const segar = () => {
+      const pilih = $$<HTMLInputElement | HTMLSelectElement>(`[name="${kolom}"]`, form).some((el) =>
+        el instanceof HTMLSelectElement ? el.value === 'Lainnya' : el.checked && el.value === 'Lainnya',
+      );
+      const baru = isi.hidden && pilih;
+      isi.hidden = !pilih;
+      if (baru) isi.focus();
+    };
+    $$(`[name="${kolom}"]`, form).forEach((el) => el.addEventListener('change', segar));
+  }
 
   $$<HTMLDetailsElement>('details.multi', form).forEach((d) => {
     const nilai = $('.multi-nilai', d);
@@ -87,7 +106,7 @@ export function formHtml(k: KegiatanInput, opt: { tandaiAi?: boolean } = {}) {
     'Kegiatan',
     `${field('Judul kegiatan', `<input name="judul" value="${esc(k.judul)}" required>`, { lebar: true, wajib: true })}
     ${field('Tema / judul materi', `<input name="tema" value="${esc(k.tema)}">`, { lebar: true })}
-    ${field('Bentuk kegiatan', pilihan('bentuk', BENTUK, k.bentuk))}
+    ${field('Bentuk kegiatan', pilihan('bentuk', BENTUK, k.bentuk) + lain('bentuk', k.lainnya?.bentuk || '', k.bentuk === 'Lainnya', 'Tulis bentuk kegiatannya'))}
     ${field('Jenis', pilihan('jenis', JENIS, k.jenis))}
     ${field('Pengundang / mitra', `<input name="pengundang" value="${esc(k.pengundang)}" placeholder="Misal: SMA Athalia">`)}
     ${field('Peran OJK', pilihan('peranOjk', PERAN_OJK, k.peranOjk))}`,
@@ -114,15 +133,15 @@ export function formHtml(k: KegiatanInput, opt: { tandaiAi?: boolean } = {}) {
   ${bagian(
     'Peserta',
     `${field('Jumlah peserta', `<div class="row"><input type="number" min="0" name="peserta" value="${k.peserta ?? ''}" required><label class="cek"><input type="checkbox" name="pesertaPerkiraan"${k.pesertaPerkiraan ? ' checked' : ''}> perkiraan</label></div>`, { wajib: true, catatan: pesertaHint })}
-    ${field('Sasaran peserta', multi('sasaran', SASARAN, k.sasaran), { wajib: true })}
+    ${field('Sasaran peserta', multi('sasaran', SASARAN, k.sasaran) + lain('sasaran', k.lainnya?.sasaran || '', k.sasaran.includes('Lainnya'), 'Tulis sasaran lainnya'), { wajib: true })}
     ${field('Keterangan peserta', `<input name="sasaranDetail" value="${esc(k.sasaranDetail)}" placeholder="Misal: Siswa kelas XII">`, { lebar: true })}`,
   )}
   ${bagian(
     'Materi',
     `${field('Narasumber', `<input name="narasumber" value="${esc(k.narasumber.join(', '))}" placeholder="Pisahkan dengan koma">`)}
-    ${field('Topik materi', multi('topik', TOPIK, k.topik))}
+    ${field('Topik materi', multi('topik', TOPIK, k.topik) + lain('topik', k.lainnya?.topik || '', k.topik.includes('Lainnya'), 'Tulis topik lainnya'))}
     ${field('Topik utama', pilihan('topikUtama', TOPIK, k.topikUtama || ''), { catatan: 'Materi pokok kegiatan. Topik lain dianggap materi pendukung/template.' })}
-    ${field('Kanal yang dikenalkan', multi('kanal', KANAL, k.kanal))}
+    ${field('Kanal yang dikenalkan', multi('kanal', KANAL, k.kanal) + lain('kanal', k.lainnya?.kanal || '', k.kanal.includes('Lainnya'), 'Tulis kanal lainnya'))}
     ${field('Metode', multi('metode', METODE, k.metode))}
     ${field('Ringkasan', `<textarea name="ringkasan" rows="2" placeholder="Pokok materi yang disampaikan">${esc(k.ringkasan)}</textarea>`, { lebar: true })}`,
   )}
@@ -164,6 +183,7 @@ export function bacaForm(form: HTMLFormElement, dasar: KegiatanInput): KegiatanI
     sasaranDetail: v('sasaranDetail'),
     topik: cek('topik'),
     topikUtama: v('topikUtama'),
+    lainnya: { bentuk: v('lain_bentuk'), sasaran: v('lain_sasaran'), topik: v('lain_topik'), kanal: v('lain_kanal') },
     kanal: cek('kanal'),
     metode: cek('metode'),
     ringkasan: v('ringkasan'),
