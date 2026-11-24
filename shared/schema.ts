@@ -87,6 +87,8 @@ export type Kegiatan = {
   peserta: number | null;
   pesertaPerkiraan: boolean; // true kalau laporan menulis "kurang lebih", "sekitar", dll.
   topik: (typeof TOPIK)[number][];
+  // Materi pokok kegiatan (satu topik). Topik lain di `topik` dianggap materi pendukung/template.
+  topikUtama: (typeof TOPIK)[number] | '';
   kanal: (typeof KANAL)[number][];
   metode: (typeof METODE)[number][];
   ringkasan: string;
@@ -153,6 +155,11 @@ export const perluKecamatan = (kab: string) => !!KECAMATAN[kab];
 
 // Merapikan data dari mana pun (form, AI, impor): buang nilai di luar daftar pilihan,
 // potong teks terlalu panjang, pastikan tipe benar.
+// Topik utama selalu ikut tercantum di daftar topik.
+function topikDanUtama(topik: (typeof TOPIK)[number][], utama: (typeof TOPIK)[number] | '') {
+  return { topik: utama && !topik.includes(utama) ? [utama, ...topik] : topik, topikUtama: utama };
+}
+
 export function rapikan(raw: Record<string, unknown>): KegiatanInput {
   const p = Number(raw.peserta);
   const tgl = str(raw.tanggal, 10);
@@ -176,7 +183,7 @@ export function rapikan(raw: Record<string, unknown>): KegiatanInput {
     sasaranDetail: str(raw.sasaranDetail, 160),
     peserta: Number.isFinite(p) && p >= 0 && raw.peserta !== '' && raw.peserta !== null ? Math.round(p) : null,
     pesertaPerkiraan: raw.pesertaPerkiraan === true,
-    topik: picks(TOPIK, raw.topik),
+    ...topikDanUtama(picks(TOPIK, raw.topik), pick(TOPIK, raw.topikUtama)),
     kanal: picks(KANAL, raw.kanal),
     metode: picks(METODE, raw.metode),
     ringkasan: str(raw.ringkasan, 1200),

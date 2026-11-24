@@ -5,7 +5,7 @@ import { generateJson, GeminiError } from './_lib/gemini.js';
 import { KECAMATAN } from '../shared/kecamatan.js';
 import { KABKOTA, SASARAN, TOPIK, cocokKecamatan } from '../shared/schema.js';
 
-type Masuk = { i: number; judul?: string; tema?: string; tempat?: string; pengundang?: string; kabkota?: string; kecamatan?: string; sasaranDetail?: string; ringkasan?: string; perlu: string[] };
+type Masuk = { i: number; judul?: string; tema?: string; topik?: string[]; tempat?: string; pengundang?: string; kabkota?: string; kecamatan?: string; sasaranDetail?: string; ringkasan?: string; perlu: string[] };
 
 const DAFTAR_KEC = Object.entries(KECAMATAN)
   .map(([k, l]) => `${k}: ${l.join(', ')}`)
@@ -39,8 +39,11 @@ Kalau kecamatan dikosongkan, "dasar" boleh berisi alasannya, mis. "Mitra MES, lo
 - kecamatan: nama persis dari daftar kecamatan kab/kota itu (di bawah), atau "".
 - sasaran: array dari [${SASARAN.map((k) => `"${k}"`).join(', ')}] (hanya jika diminta).
 - topik: array dari [${TOPIK.map((k) => `"${k}"`).join(', ')}] (hanya jika diminta).
+- topikUtama: SATU topik dari daftar topik yang menjadi materi pokok kegiatan, dilihat dari judul, tema, dan ringkasan (hanya jika diminta).
+  Materi pengantar/template yang selalu dibawakan (misal pengenalan OJK) bukan topik utama, kecuali judul/tema memang tentang itu. Kalau ragu, "".
+  Kalau diminta topikUtama saja, kolom lain boleh dibiarkan kosong.
 Jangan mengarang. Kalau ragu, kosongkan.
-Jawab HANYA JSON: {"hasil":[{"i":nomor,"kabkota":"","kecamatan":"","dasar":"","sasaran":[],"topik":[]}]}
+Jawab HANYA JSON: {"hasil":[{"i":nomor,"kabkota":"","kecamatan":"","dasar":"","sasaran":[],"topik":[],"topikUtama":""}]}
 
 Daftar kecamatan:
 ${DAFTAR_KEC}
@@ -50,7 +53,7 @@ ${JSON.stringify(baris.map((b) => ({ ...b, judul: String(b.judul || '').slice(0,
   try {
     let data: any;
     if (process.env.MOCK_AI && !process.env.VERCEL)
-      data = { hasil: baris.map((b) => ({ i: b.i, kabkota: b.kabkota || 'Kabupaten Lebak', kecamatan: (KECAMATAN[b.kabkota || 'Kabupaten Lebak'] || [])[0] || '', dasar: b.pengundang ? 'Alamat mitra ' + b.pengundang : '', sasaran: ['Masyarakat umum'], topik: ['Pengelolaan keuangan pribadi'] })) };
+      data = { hasil: baris.map((b) => ({ i: b.i, kabkota: b.kabkota || 'Kabupaten Lebak', kecamatan: (KECAMATAN[b.kabkota || 'Kabupaten Lebak'] || [])[0] || '', dasar: b.pengundang ? 'Alamat mitra ' + b.pengundang : '', sasaran: ['Masyarakat umum'], topik: ['Pengelolaan keuangan pribadi'], topikUtama: 'Pengelolaan keuangan pribadi' })) };
     else data = (await generateJson([{ text: prompt }], { temperature: 0.1, maxTokens: 8192 })).data;
     const hasil = (Array.isArray(data?.hasil) ? data.hasil : []).map((h: any) => {
       const kab = (KABKOTA as readonly string[]).includes(h.kabkota) ? h.kabkota : '';
@@ -61,6 +64,7 @@ ${JSON.stringify(baris.map((b) => ({ ...b, judul: String(b.judul || '').slice(0,
         dasar: String(h.dasar || '').slice(0, 120),
         sasaran: (Array.isArray(h.sasaran) ? h.sasaran : []).filter((x: string) => (SASARAN as readonly string[]).includes(x)),
         topik: (Array.isArray(h.topik) ? h.topik : []).filter((x: string) => (TOPIK as readonly string[]).includes(x)),
+        topikUtama: (TOPIK as readonly string[]).includes(h.topikUtama) ? h.topikUtama : '',
       };
     });
     return ok(res, { hasil });

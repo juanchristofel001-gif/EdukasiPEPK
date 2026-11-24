@@ -121,6 +121,7 @@ export function formHtml(k: KegiatanInput, opt: { tandaiAi?: boolean } = {}) {
     'Materi',
     `${field('Narasumber', `<input name="narasumber" value="${esc(k.narasumber.join(', '))}" placeholder="Pisahkan dengan koma">`)}
     ${field('Topik materi', multi('topik', TOPIK, k.topik))}
+    ${field('Topik utama', pilihan('topikUtama', TOPIK, k.topikUtama || ''), { catatan: 'Materi pokok kegiatan. Topik lain dianggap materi pendukung/template.' })}
     ${field('Kanal yang dikenalkan', multi('kanal', KANAL, k.kanal))}
     ${field('Metode', multi('metode', METODE, k.metode))}
     ${field('Ringkasan', `<textarea name="ringkasan" rows="2" placeholder="Pokok materi yang disampaikan">${esc(k.ringkasan)}</textarea>`, { lebar: true })}`,
@@ -162,6 +163,7 @@ export function bacaForm(form: HTMLFormElement, dasar: KegiatanInput): KegiatanI
     sasaran: cek('sasaran'),
     sasaranDetail: v('sasaranDetail'),
     topik: cek('topik'),
+    topikUtama: v('topikUtama'),
     kanal: cek('kanal'),
     metode: cek('metode'),
     ringkasan: v('ringkasan'),

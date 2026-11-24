@@ -677,7 +677,7 @@ input.ro { color: var(--mute); }
 
 /* ---------- pelayanan vs edukasi ---------- */
 #gap .seg { margin-bottom: 14px; }
-.gap-kepala, .gap li { display: grid; grid-template-columns: minmax(150px, 1.3fr) 1fr 1fr; gap: 14px; align-items: center; }
+.gap-kepala, .gap li { display: grid; grid-template-columns: minmax(150px, 1.3fr) 1fr 1fr 0.6fr; gap: 14px; align-items: center; }
 .gap-kepala { font-size: 12px; font-weight: 700; color: var(--mute); text-transform: uppercase; letter-spacing: 0.04em; padding: 0 0 6px; border-bottom: 1px solid var(--line); }
 .gap { list-style: none; margin: 0; padding: 0; }
 .gap li { padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
@@ -701,3 +701,9 @@ input.ro { color: var(--mute); }
 .gap-n { font-size: 13px; color: var(--mute); margin: 0 0 10px; }
 .gap-n b { color: var(--ink, inherit); }
 .gap-kurang { color: var(--merah); }
+
+.gap-kepala small { font-weight: 500; text-transform: none; letter-spacing: 0; }
+.gap .gtr { font-size: 11px; color: var(--mute); margin-left: 2px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gap .gtr.naik { color: var(--merah); font-weight: 700; }
+.gap .gu { font-size: 13px; }
+.gap-utama { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; padding: 10px 12px; border-radius: 10px; background: var(--merah-t); font-size: 13px; }

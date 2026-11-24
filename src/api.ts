@@ -86,7 +86,7 @@ export const api = {
   unduhCadangan: (t: string) => req<{ kegiatan: (Kegiatan & { dihapus?: string | null })[] }>('GET', '/api/cadangan?unduh=' + encodeURIComponent(t)),
   pulihkanCadangan: (t: string) => req<{ dipulihkan: number; disampahkan: number }>('POST', '/api/cadangan?pulihkan=' + encodeURIComponent(t)),
   impor: (file: string, isian: KegiatanInput[]) => req<{ jumlah: number }>('POST', '/api/kegiatan?impor=1', { file, isian }).then((r) => r.jumlah),
-  lengkapi: (baris: unknown[]) => req<{ hasil: { i: number; kabkota: string; kecamatan: string; dasar: string; sasaran: string[]; topik: string[] }[] }>('POST', '/api/lengkapi', { baris }).then((r) => r.hasil),
+  lengkapi: (baris: unknown[]) => req<{ hasil: { i: number; kabkota: string; kecamatan: string; dasar: string; sasaran: string[]; topik: string[]; topikUtama: string }[] }>('POST', '/api/lengkapi', { baris }).then((r) => r.hasil),
   riwayat: (id?: string) => req<{ riwayat: Riwayat[] }>('GET', '/api/riwayat' + (id ? '?id=' + encodeURIComponent(id) : '')).then((r) => r.riwayat),
   buatCadangan: () => req<{ cadangan: string }>('POST', '/api/cadangan'),
   ekstrak: (b: { nama: string; teks?: string; gambar?: { mime: string; data: string }[] }) => req<{ isian: KegiatanInput; model: string }>('POST', '/api/ekstrak', b),
